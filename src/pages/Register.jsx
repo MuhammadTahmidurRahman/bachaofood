@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, MapPin, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, MapPin, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
 
@@ -71,6 +71,9 @@ const Register = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
   const locationInputRef = useRef();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -269,41 +272,67 @@ const Register = () => {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password *
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`input-field pl-12 ${errors.password ? 'border-red-400' : ''}`}
-                    placeholder="••••••••"
-                  />
-                </div>
-                {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
-              </div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Password *
+  </label>
+
+  <div className="relative">
+    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+    <input
+      type={showPassword ? "text" : "password"}
+      name="password"
+      value={formData.password}
+      onChange={handleChange}
+      className={`input-field pl-12 pr-12 ${errors.password ? 'border-red-400' : ''}`}
+      placeholder="••••••••"
+    />
+
+    {/* Eye Button */}
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+    >
+      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  </div>
+
+  {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+</div>
+
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`input-field pl-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
-                    placeholder="••••••••"
-                  />
-                </div>
-                {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
-              </div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Confirm Password *
+  </label>
+
+  <div className="relative">
+    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+    <input
+      type={showConfirmPassword ? "text" : "password"}
+      name="confirmPassword"
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      className={`input-field pl-12 pr-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
+      placeholder="••••••••"
+    />
+
+    {/* Eye Button */}
+    <button
+      type="button"
+      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+    >
+      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  </div>
+
+  {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
+</div>
+
 
               {/* LOCATION (merged with autocomplete + current location + type) */}
               <div>
