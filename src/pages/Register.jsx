@@ -281,9 +281,9 @@ const Register = () => {
                     onChange={handleChange}
                     className="input-field pl-12"
                   >
-                    <option value="low">Low ($)</option>
-                    <option value="medium">Medium ($$)</option>
-                    <option value="high">High ($$$)</option>
+                    <option value="low">Low (Between 300-500 taka)</option>
+                    <option value="medium">Medium (Between 600-1200 taka)</option>
+                    <option value="high">High (Over 1200 taka)</option>
                   </select>
                 </div>
               </div>
