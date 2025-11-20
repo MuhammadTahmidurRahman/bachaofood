@@ -70,57 +70,29 @@ const Register = () => {
     setLoading(true);
     setApiError('');
 
-    try {
-      // Step 1: Sign up the user
-      const { data: authData, error: authError } = await signUp(
-        formData.email,
-        formData.password,
-        {}
-      );
+    const userData = {
+      full_name: formData.fullName,
+      household_size: parseInt(formData.householdSize),
+      dietary_preference: formData.dietaryPreference,
+      budget_range: formData.budgetRange,
+      budget_type: formData.budgetRange,
+      budget_amount: String(formData.budgetRange === 'low' ? 400 : formData.budgetRange === 'medium' ? 900 : 1500),
+      location: formData.location
+    };
 
-      if (authError) {
-        setApiError(authError.message || 'Failed to create account. Please try again.');
-        setLoading(false);
-        return;
-      }
+    const { data, error } = await signUp(
+      formData.email,
+      formData.password,
+      userData
+    );
 
-      if (!authData.user) {
-        setApiError('Failed to create account. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      // Step 2: Create the profile with correct column names
-      const profileData = {
-        full_name: formData.fullName,
-        household_size: parseInt(formData.householdSize),
-        dietary_preference: formData.dietaryPreference,
-        budget_range: formData.budgetRange,
-        budget_type: formData.budgetRange,
-        budget_amount: formData.budgetRange === 'low' ? 400 : formData.budgetRange === 'medium' ? 900 : 1500,
-        location: formData.location
-      };
-
-      console.log('Creating profile with data:', profileData);
-
-      const { data: profileResult, error: profileError } = await dbHelpers.createProfile(
-        authData.user.id,
-        profileData
-      );
-
-      console.log('Profile creation result:', profileResult, profileError);
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        setApiError('Account created but profile setup failed. Please update your profile.');
-      }
-
-      navigate('/dashboard');
-      
-    } catch (err) {
-      console.error('Registration error:', err);
-      setApiError('An unexpected error occurred');
+    if (error) {
+      setApiError(error.message || 'Failed to create account. Please try again.');
       setLoading(false);
+    } else if (data.user) {
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
     }
   };
 

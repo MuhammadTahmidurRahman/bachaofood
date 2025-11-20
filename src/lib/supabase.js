@@ -13,27 +13,32 @@ export const authHelpers = {
   },
 
   async signUp(email, password, userData) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: userData.full_name
       }
-    });
-    
-    if (data.user && !error) {
-      await supabase.from('profiles').insert([{
-        user_id: data.user.id,
-        full_name: userData.full_name,
-        household_size: userData.household_size,
-        dietary_preference: userData.dietary_preference,
-        budget_range: userData.budget_range,
-        location: userData.location
-      }]);
     }
+  });
+  
+  if (data.user && !error) {
+    await supabase.from('profiles').insert([{
+      user_id: data.user.id,
+      full_name: userData.full_name,
+      household_size: userData.household_size,
+      dietary_preference: userData.dietary_preference,
+      budget_range: userData.budget_range,
+      budget_type: userData.budget_type,
+      budget_amount: userData.budget_amount,
+      location: userData.location
+    }]);
+  }
+  
+  return { data, error };
+},
     
-    return { data, error };
-  },
 
   async signIn(email, password) {
     return await supabase.auth.signInWithPassword({ email, password });

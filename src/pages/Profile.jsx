@@ -31,20 +31,19 @@ const Profile = () => {
 
   const loadProfile = async () => {
     setLoading(true);
-    console.log('Loading profile for user:', user.id);
     
     try {
       const { data, error } = await dbHelpers.getProfile(user.id);
 
-      console.log('Profile data:', data);
-      console.log('Profile error:', error);
-
       if (error) {
         console.error('Error loading profile:', error);
         setMessage('Error loading profile');
+        setLoading(false);
+        return;
       }
 
       if (data) {
+        console.log('Profile loaded:', data);
         setProfile(data);
         setFormData({
           full_name: data.full_name || '',
@@ -52,21 +51,11 @@ const Profile = () => {
           household_size: data.household_size || 1,
           dietary_preference: data.dietary_preference || 'none',
           budget_range: data.budget_range || 'medium',
-          budget_type: data.budget_type || 'medium',
+          budget_type: data.budget_type || data.budget_range || 'medium',
           budget_amount: data.budget_amount || 900
         });
       } else {
         console.log('No profile found');
-        setProfile(null);
-        setFormData({
-          full_name: '',
-          location: '',
-          household_size: 1,
-          dietary_preference: 'none',
-          budget_range: 'medium',
-          budget_type: 'medium',
-          budget_amount: 900
-        });
       }
     } catch (err) {
       console.error('Exception loading profile:', err);
@@ -95,14 +84,22 @@ const Profile = () => {
 
       const { data, error } = await dbHelpers.updateProfile(user.id, updatedData);
 
-      console.log('Update response:', data, error);
-
       if (error) {
-        setMessage('Error updating profile');
         console.error('Update error:', error);
+        setMessage('Error updating profile');
       } else {
+        console.log('Profile updated:', data);
         setMessage('Profile updated successfully!');
         setProfile(data);
+        setFormData({
+          full_name: data.full_name || '',
+          location: data.location || '',
+          household_size: data.household_size || 1,
+          dietary_preference: data.dietary_preference || 'none',
+          budget_range: data.budget_range || 'medium',
+          budget_type: data.budget_type || data.budget_range || 'medium',
+          budget_amount: data.budget_amount || 900
+        });
         setIsEditing(false);
         setTimeout(() => setMessage(''), 3000);
       }
@@ -312,7 +309,8 @@ const Profile = () => {
           {/* Budget Range */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              Weekly Budget Range
+              <DollarSign className="w-4 h-4 mr-2" />
+              Budget Range
             </label>
             {isEditing ? (
               <select
