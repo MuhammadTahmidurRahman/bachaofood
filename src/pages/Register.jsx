@@ -1,71 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, MapPin, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
-
-// FREE Location Autocomplete + Current Location (LocationIQ)
-const FreeLocationInput = React.forwardRef(({ value, onChange, error }, ref) => {
-  const inputRef = useRef(null);
-  const [suggestions, setSuggestions] = useState([]);
-
-  const searchCity = async (query) => {
-    if (query.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `https://api.locationiq.com/v1/autocomplete.php?key=${import.meta.env.VITE_LOCATIONIQ_TOKEN}&q=${encodeURIComponent(query)}&limit=5&tag=city,town`
-      );
-      const data = await res.json();
-      setSuggestions(data || []);
-    } catch (err) {
-      setSuggestions([]);
-    }
-  };
-
-  React.useImperativeHandle(ref, () => ({
-    focus: () => inputRef.current?.focus()
-  }));
-
-  return (
-    <div className="relative">
-      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
-
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => {
-          onChange(e);
-          searchCity(e.target.value);
-        }}
-        className={`input-field pl-12 ${error ? 'border-red-400' : ''}`}
-        placeholder="Search your city..."
-      />
-
-      {suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-          {suggestions.map((item) => (
-            <div
-              key={item.place_id}
-              onClick={() => {
-                onChange({ target: { name: 'location', value: item.display_name } });
-                setSuggestions([]);
-              }}
-              className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
-            >
-              {item.display_name}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
+import FreeLocationInput from './FreeLocationInput';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -272,66 +211,66 @@ const Register = () => {
 
               {/* Password */}
               <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">
-    Password *
-  </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password *
+                </label>
 
-  <div className="relative">
-    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
 
-    <input
-      type={showPassword ? "text" : "password"}
-      name="password"
-      value={formData.password}
-      onChange={handleChange}
-      className={`input-field pl-12 pr-12 ${errors.password ? 'border-red-400' : ''}`}
-      placeholder="••••••••"
-    />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`input-field pl-12 pr-12 ${errors.password ? 'border-red-400' : ''}`}
+                    placeholder="••••••••"
+                  />
 
-    {/* Eye Button */}
-    <button
-      type="button"
-      onClick={() => setShowPassword(!showPassword)}
-      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-    >
-      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-    </button>
-  </div>
+                  {/* Eye Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
 
-  {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
-</div>
+                {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+              </div>
 
 
               {/* Confirm Password */}
               <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">
-    Confirm Password *
-  </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Confirm Password *
+                </label>
 
-  <div className="relative">
-    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
 
-    <input
-      type={showConfirmPassword ? "text" : "password"}
-      name="confirmPassword"
-      value={formData.confirmPassword}
-      onChange={handleChange}
-      className={`input-field pl-12 pr-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
-      placeholder="••••••••"
-    />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`input-field pl-12 pr-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
+                    placeholder="••••••••"
+                  />
 
-    {/* Eye Button */}
-    <button
-      type="button"
-      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-    >
-      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-    </button>
-  </div>
+                  {/* Eye Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
 
-  {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
-</div>
+                {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
+              </div>
 
 
               {/* LOCATION (merged with autocomplete + current location + type) */}
