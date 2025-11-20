@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, BookOpen, Package, Leaf, Upload, User, LogOut, Menu, X } from 'lucide-react';
+import { Home, BookOpen, Package, Leaf, Upload, User, LogOut, Menu, X, UtensilsCrossed, Apple, Pizza, Soup } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+// Floating Orbs Component
+const FloatingOrbs = () => (
+  <div className="floating-orbs">
+    <div className="orb orb-1"></div>
+    <div className="orb orb-2"></div>
+    <div className="orb orb-3"></div>
+  </div>
+);
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -25,120 +34,272 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className="glass-effect sticky top-0 z-50 border-b border-white/20"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <motion.div
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-                className="w-10 h-10 bg-gradient-to-br from-primary-500 to-emerald-600 rounded-xl flex items-center justify-center"
-              >
-                <Leaf className="w-6 h-6 text-white" />
-              </motion.div>
-              <span className="text-2xl font-bold gradient-text hidden sm:block">BachaoFood</span>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link key={item.path} to={item.path}>
+    <>
+      <FloatingOrbs />
+      
+      <div className="min-h-screen relative">
+        {/* Navigation */}
+        <motion.nav
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 100 }}
+          className="sticky top-0 z-50"
+          style={{
+            background: 'rgba(255, 255, 255, 0.12)',
+            backdropFilter: 'blur(25px)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(74, 122, 109, 0.15)',
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-20">
+              {/* Logo with 3D Rotating Food Icons */}
+              <Link to="/dashboard" className="flex items-center space-x-3">
+                <motion.div
+                  className="relative"
+                  style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+                >
+                  {/* 3D Rotating Plate Base */}
+                  <motion.div
+                    animate={{ 
+                      rotateY: 360,
+                      rotateX: [0, 10, 0]
+                    }}
+                    transition={{ 
+                      rotateY: { duration: 8, repeat: Infinity, ease: "linear" },
+                      rotateX: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                    className="w-16 h-16 rounded-full relative"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(107, 150, 136, 0.4) 0%, rgba(90, 134, 121, 0.3) 100%)',
+                      boxShadow: '0 12px 45px rgba(74, 122, 109, 0.35), inset 0 0 25px rgba(255, 255, 255, 0.2)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      transformStyle: 'preserve-3d',
+                    }}
+                  >
+                    {/* Rotating Food Icons - Center */}
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
-                        isActive
-                          ? 'bg-gradient-to-r from-primary-500 to-emerald-600 text-white shadow-lg'
-                          : 'text-gray-600 hover:bg-white/50'
-                      }`}
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0 flex items-center justify-center"
                     >
-                      <Icon className="w-4 h-4" />
-                      <span className="font-medium">{item.label}</span>
+                      <UtensilsCrossed 
+                        className="w-7 h-7 text-white" 
+                        style={{ filter: 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.7))' }} 
+                      />
                     </motion.div>
-                  </Link>
-                );
-              })}
+
+                    {/* Orbiting Food Elements - Matching sage-teal colors */}
+                    <motion.div
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0"
+                    >
+                      <Apple 
+                        className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-4 h-4 text-green-200" 
+                        style={{ filter: 'drop-shadow(0 0 10px rgba(187, 247, 208, 0.9))' }}
+                      />
+                    </motion.div>
+
+                    <motion.div
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 2 }}
+                      className="absolute inset-0"
+                    >
+                      <Pizza 
+                        className="absolute bottom-0 right-0 w-4 h-4 text-teal-200" 
+                        style={{ filter: 'drop-shadow(0 0 10px rgba(153, 246, 228, 0.9))' }}
+                      />
+                    </motion.div>
+
+                    <motion.div
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 7, repeat: Infinity, ease: "linear", delay: 4 }}
+                      className="absolute inset-0"
+                    >
+                      <Soup 
+                        className="absolute bottom-0 left-0 w-4 h-4 text-cyan-200" 
+                        style={{ filter: 'drop-shadow(0 0 10px rgba(165, 243, 252, 0.9))' }}
+                      />
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Glow Effect */}
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.4, 1],
+                      opacity: [0.4, 0.7, 0.4]
+                    }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: 'radial-gradient(circle, rgba(107, 150, 136, 0.4) 0%, transparent 70%)',
+                      filter: 'blur(15px)',
+                    }}
+                  />
+                </motion.div>
+
+                <motion.span 
+                  className="text-2xl font-black gradient-text hidden sm:block"
+                  animate={{
+                    filter: [
+                      'drop-shadow(0 0 18px rgba(255, 255, 255, 0.5))',
+                      'drop-shadow(0 0 28px rgba(107, 150, 136, 0.7))',
+                      'drop-shadow(0 0 18px rgba(255, 255, 255, 0.5))',
+                    ]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
+                  BachaoFood
+                </motion.span>
+              </Link>
+
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center space-x-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link key={item.path} to={item.path}>
+                      <motion.div
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`flex items-center space-x-2 px-5 py-3 rounded-xl transition-all relative ${
+                          isActive ? 'text-white' : 'text-white/75 hover:text-white'
+                        }`}
+                        style={{
+                          background: isActive 
+                            ? 'rgba(107, 150, 136, 0.25)'
+                            : 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          border: isActive 
+                            ? '1px solid rgba(107, 150, 136, 0.4)'
+                            : '1px solid rgba(255, 255, 255, 0.15)',
+                          boxShadow: isActive 
+                            ? '0 0 25px rgba(107, 150, 136, 0.2), inset 0 0 20px rgba(255, 255, 255, 0.08)'
+                            : 'none',
+                        }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="font-semibold text-sm">{item.label}</span>
+                        
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeIndicator"
+                            className="absolute bottom-0 left-0 right-0 h-0.5"
+                            style={{
+                              background: 'linear-gradient(90deg, #6b9688, #5a8679)',
+                              boxShadow: '0 0 12px rgba(107, 150, 136, 0.9)',
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    </Link>
+                  );
+                })}
+
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 px-5 py-3 rounded-xl text-white font-semibold text-sm"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.18)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </motion.button>
+              </div>
+
+              {/* Mobile menu button */}
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all"
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-3 rounded-xl"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}
               >
-                <LogOut className="w-4 h-4" />
-                <span className="font-medium">Logout</span>
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6 text-white" />
+                ) : (
+                  <Menu className="w-6 h-6 text-white" />
+                )}
               </motion.button>
             </div>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-white/50 transition-all"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
-        </div>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:hidden border-t border-white/20 bg-white/90 backdrop-blur-xl"
-          >
-            <div className="px-4 py-4 space-y-2">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <div
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                        isActive
-                          ? 'bg-gradient-to-r from-primary-500 to-emerald-600 text-white'
-                          : 'text-gray-600 hover:bg-white/50'
-                      }`}
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden"
+              style={{
+                background: 'rgba(107, 150, 136, 0.2)',
+                backdropFilter: 'blur(25px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+              }}
+            >
+              <div className="px-4 py-4 space-y-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{item.label}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </motion.nav>
+                      <motion.div
+                        whileTap={{ scale: 0.98 }}
+                        className={`flex items-center space-x-3 px-5 py-4 rounded-xl transition-all ${
+                          isActive ? 'text-white' : 'text-white/75'
+                        }`}
+                        style={{
+                          background: isActive 
+                            ? 'rgba(107, 150, 136, 0.3)'
+                            : 'rgba(255, 255, 255, 0.08)',
+                          border: `1px solid rgba(255, 255, 255, ${isActive ? '0.25' : '0.15'})`,
+                        }}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="font-semibold">{item.label}</span>
+                      </motion.div>
+                    </Link>
+                  );
+                })}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-4 rounded-xl text-white font-semibold"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.18)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                  }}
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </motion.nav>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-    </div>
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+      </div>
+    </>
   );
 };
 

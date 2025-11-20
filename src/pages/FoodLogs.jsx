@@ -35,7 +35,20 @@ const FoodLogs = () => {
   const [inventoryList, setInventoryList] = useState([]);
   const [invLoading, setInvLoading] = useState(true);
 
-  const categories = ['Fruit', 'Vegetable', 'Dairy', 'Protein', 'Grain', 'Pantry', 'Other'];
+   const categories = [
+    'All',
+    'Fruit',
+    'Vegetable',
+    'Dairy',
+    'Protein',
+    'Grain',
+    'Pantry',
+    'Beverages',
+    'Snacks',
+    'Frozen',
+    'Condiments',
+    'Other'
+  ];
 
   useEffect(() => {
     if (!user) return;

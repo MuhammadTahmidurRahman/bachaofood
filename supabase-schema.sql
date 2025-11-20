@@ -1,13 +1,26 @@
--- SUPABASE DATABASE SCHEMA
--- Run this in your Supabase SQL Editor
+-- ============================================================
+-- SUPABASE DATABASE FULL CLEAN REBUILD
+-- ============================================================
 
--- Enable UUID extension
+-- Enable UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Profiles table
+---------------------------------------------------------------
+-- DROP ALL TABLES (SAFE CLEAN RESET)
+---------------------------------------------------------------
+DROP TABLE IF EXISTS uploads CASCADE;
+DROP TABLE IF EXISTS resources CASCADE;
+DROP TABLE IF EXISTS food_items CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS food_logs CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+---------------------------------------------------------------
+-- PROFILES TABLE
+---------------------------------------------------------------
 CREATE TABLE profiles (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
   household_size INTEGER DEFAULT 1,
   dietary_preference TEXT,
@@ -18,24 +31,33 @@ CREATE TABLE profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Food logs table
+---------------------------------------------------------------
+-- FOOD LOGS
+---------------------------------------------------------------
 CREATE TABLE food_logs (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item_name TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
   category TEXT NOT NULL,
   notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Inventory table
+---------------------------------------------------------------
+-- INVENTORY TABLE
+-- Improved for deduction + restore logic
+---------------------------------------------------------------
 CREATE TABLE inventory (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item_name TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
+  original_quantity NUMERIC,  -- useful for logging history
   category TEXT NOT NULL,
+  unit TEXT DEFAULT 'piece',
+  source TEXT DEFAULT 'manual',
   purchase_date DATE DEFAULT CURRENT_DATE,
   expiry_date DATE,
   cost NUMERIC,
@@ -43,20 +65,24 @@ CREATE TABLE inventory (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Food items (reference/seeded data)
+---------------------------------------------------------------
+-- FOOD ITEMS TABLE (REFERENCE ONLY)
+---------------------------------------------------------------
 CREATE TABLE food_items (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   category TEXT NOT NULL,
   expiration_days INTEGER,
-  cost_per_unit NUMERIC,
+  cost_per_unit NUMERIC,       -- stored directly in BDT
   unit TEXT DEFAULT 'piece',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Resources table
+---------------------------------------------------------------
+-- RESOURCES TABLE
+---------------------------------------------------------------
 CREATE TABLE resources (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   url TEXT,
@@ -65,10 +91,12 @@ CREATE TABLE resources (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Uploads table
+---------------------------------------------------------------
+-- UPLOADS TABLE
+---------------------------------------------------------------
 CREATE TABLE uploads (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   file_url TEXT NOT NULL,
   file_type TEXT NOT NULL,
   associated_with TEXT,
@@ -76,7 +104,9 @@ CREATE TABLE uploads (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security
+---------------------------------------------------------------
+-- ENABLE RLS
+---------------------------------------------------------------
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE food_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
@@ -84,23 +114,45 @@ ALTER TABLE food_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uploads ENABLE ROW LEVEL SECURITY;
 
--- Policies
-CREATE POLICY "Enable read access for all users" ON food_items FOR SELECT USING (true);
-CREATE POLICY "Enable read access for all users" ON resources FOR SELECT USING (true);
+---------------------------------------------------------------
+-- RLS POLICIES
+---------------------------------------------------------------
 
-CREATE POLICY "Enable all for authenticated users" ON profiles
-  FOR ALL USING (auth.uid() = user_id);
+-- Public read tables
+CREATE POLICY "Public Read Food Items"
+ON food_items
+FOR SELECT
+USING (true);
 
-CREATE POLICY "Enable all for own data" ON food_logs
-  FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Public Read Resources"
+ON resources
+FOR SELECT
+USING (true);
 
-CREATE POLICY "Enable all for own data" ON inventory
-  FOR ALL USING (auth.uid() = user_id);
+-- Private user tables
+CREATE POLICY "User Own Profile"
+ON profiles
+FOR ALL
+USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all for own data" ON uploads
-  FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "User Own Logs"
+ON food_logs
+FOR ALL
+USING (auth.uid() = user_id);
 
--- Triggers for updated_at
+CREATE POLICY "User Own Inventory"
+ON inventory
+FOR ALL
+USING (auth.uid() = user_id);
+
+CREATE POLICY "User Own Uploads"
+ON uploads
+FOR ALL
+USING (auth.uid() = user_id);
+
+---------------------------------------------------------------
+-- TRIGGER: update updated_at timestamp
+---------------------------------------------------------------
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -109,16 +161,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_profiles_updated_at
+-- Attach triggers
+CREATE TRIGGER trg_profiles_update
 BEFORE UPDATE ON profiles
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
 
-CREATE TRIGGER update_inventory_updated_at
+CREATE TRIGGER trg_inventory_update
 BEFORE UPDATE ON inventory
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
 
--- Seed food_items with more data
+CREATE TRIGGER trg_food_logs_update
+BEFORE UPDATE ON food_logs
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
+
+---------------------------------------------------------------
+-- SEED DATA: FOOD ITEMS (BDT VERSION)
+---------------------------------------------------------------
 INSERT INTO food_items (name, category, expiration_days, cost_per_unit, unit) VALUES
+-- Fruit
 ('Apple', 'Fruit', 7, 20, 'piece'),
 ('Banana', 'Fruit', 5, 10, 'piece'),
 ('Orange', 'Fruit', 7, 15, 'piece'),
@@ -129,6 +189,8 @@ INSERT INTO food_items (name, category, expiration_days, cost_per_unit, unit) VA
 ('Watermelon', 'Fruit', 7, 20, 'kg'),
 ('Papaya', 'Fruit', 4, 40, 'kg'),
 ('Kiwi', 'Fruit', 7, 50, 'piece'),
+
+-- Vegetables
 ('Carrot', 'Vegetable', 14, 30, 'kg'),
 ('Potato', 'Vegetable', 30, 20, 'kg'),
 ('Tomato', 'Vegetable', 7, 40, 'kg'),
@@ -139,69 +201,68 @@ INSERT INTO food_items (name, category, expiration_days, cost_per_unit, unit) VA
 ('Cauliflower', 'Vegetable', 7, 40, 'kg'),
 ('Eggplant', 'Vegetable', 5, 50, 'kg'),
 ('Bell Pepper', 'Vegetable', 7, 80, 'kg'),
+
+-- Dairy
 ('Milk', 'Dairy', 7, 80, 'liter'),
 ('Cheese', 'Dairy', 30, 500, 'kg'),
 ('Yogurt', 'Dairy', 14, 100, 'kg'),
 ('Butter', 'Dairy', 60, 400, 'kg'),
+
+-- Protein
 ('Chicken', 'Protein', 2, 250, 'kg'),
 ('Beef', 'Protein', 3, 600, 'kg'),
 ('Fish', 'Protein', 2, 300, 'kg'),
 ('Eggs', 'Protein', 30, 10, 'piece'),
 ('Tofu', 'Protein', 7, 150, 'kg'),
 ('Lentils', 'Protein', 365, 100, 'kg'),
+
+-- Grain
 ('Rice', 'Grain', 365, 60, 'kg'),
 ('Wheat Flour', 'Grain', 180, 50, 'kg'),
 ('Bread', 'Grain', 5, 40, 'piece'),
 ('Pasta', 'Grain', 365, 100, 'kg'),
 ('Oats', 'Grain', 365, 150, 'kg'),
+
+-- Pantry
 ('Sugar', 'Pantry', 730, 80, 'kg'),
 ('Salt', 'Pantry', 730, 20, 'kg'),
 ('Oil', 'Pantry', 365, 150, 'liter'),
+
+-- Beverages
 ('Tea', 'Beverages', 365, 300, 'kg'),
 ('Coffee', 'Beverages', 365, 500, 'kg'),
 ('Soda', 'Beverages', 180, 50, 'liter'),
 ('Juice', 'Beverages', 7, 100, 'liter'),
 ('Water Bottle', 'Beverages', 365, 20, 'liter'),
+
+-- Snacks
 ('Chips', 'Snacks', 90, 50, 'packet'),
 ('Biscuits', 'Snacks', 180, 30, 'packet'),
 ('Nuts', 'Snacks', 180, 400, 'kg'),
 ('Chocolate', 'Snacks', 365, 200, 'kg'),
+
+-- Frozen
 ('Ice Cream', 'Frozen', 180, 150, 'liter'),
 ('Frozen Vegetables', 'Frozen', 365, 100, 'kg'),
+
+-- Condiments
 ('Ketchup', 'Condiments', 365, 100, 'bottle'),
 ('Mustard', 'Condiments', 365, 80, 'bottle'),
 ('Soy Sauce', 'Condiments', 365, 120, 'bottle');
 
--- Seed resources with more data
 INSERT INTO resources (title, description, url, category, type) VALUES
-('Budget Meal Planning', 'Plan nutritious meals on a tight budget', 'https://www.eatright.org/food/planning/budget-shopping', 'Budget Tips', 'Article'),
-('Food Storage Guide', 'Best practices for storing different foods', 'https://www.fda.gov/food/buy-store-serve-safe-food/food-storage-chart', 'Storage Tips', 'Article'),
-('Reduce Food Waste', 'Tips to minimize household food waste', 'https://www.epa.gov/recycle/reducing-wasted-food-home', 'Waste Reduction', 'Article'),
-('Healthy Meal Prep', 'Prepare healthy meals in advance', 'https://www.nutrition.gov/topics/healthy-living-and-weight/strategies-success', 'Meal Planning', 'Article'),
-('Balanced Nutrition Basics', 'Understanding essential nutrients', 'https://www.who.int/health-topics/nutrition', 'Nutrition', 'Article'),
-('Home Composting', 'Turn food scraps into rich soil', 'https://www.epa.gov/recycle/composting-home', 'Waste Reduction', 'Article'),
-('Seasonal Eating Guide', 'Benefits of eating seasonal produce', 'https://www.nutrition.gov/topics/diet-and-health-conditions/seasonal-produce-guide', 'Nutrition', 'Article'),
-('Food Safety Fundamentals', 'Essential food safety practices for home cooking', 'https://www.fda.gov/food/buy-store-serve-safe-food/safe-food-handling', 'Food Safety', 'Article'),
-('Smart Grocery Shopping Tips', 'Make the most of your grocery budget', 'https://www.myplate.gov/eat-healthy/healthy-eating-budget/tips-shopping', 'Budget Tips', 'Article'),
-('Protein on a Budget', 'Affordable protein sources for every diet', 'https://www.nutrition.gov/topics/basic-nutrition/protein', 'Budget Tips', 'Article'),
-('Zero Waste Kitchen', 'Steps to create a waste-free kitchen', 'https://www.epa.gov/recycle/preventing-wasted-food-home', 'Waste Reduction', 'Article'),
-('Portion Control Guide', 'Understanding proper serving sizes', 'https://www.myplate.gov/eat-healthy/what-is-myplate', 'Nutrition', 'Article'),
-('Leftover Transformation Recipes', 'Creative ways to use leftovers', 'https://www.nutrition.gov/topics/shopping-cooking-and-meal-planning', 'Meal Planning', 'Article'),
-('Pantry Organization Tips', 'Organize your pantry for efficiency', 'https://www.fda.gov/food/buy-store-serve-safe-food/are-you-storing-food-safely', 'Storage Tips', 'Article'),
-('Nutrition Label Reading', 'Decode nutrition facts and make informed choices', 'https://www.fda.gov/food/new-nutrition-facts-label/how-understand-and-use-nutrition-facts-label', 'Nutrition', 'Article'),
-('Sustainable Shopping Habits', 'Choose eco-friendly food options', 'https://www.epa.gov/sustainable-management-food', 'Sustainability', 'Article'),
-('Food Preservation Methods', 'Traditional and modern food preservation techniques', 'https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/canning-and-food-preservation', 'Storage Tips', 'Article'),
-('Vegan Meal Ideas', 'Delicious plant-based recipes on a budget', 'https://www.pcrm.org/good-nutrition/plant-based-diets/recipes', 'Meal Planning', 'Article'),
-('Quick Healthy Snacks', 'Nutritious snacks for busy days', 'https://www.heart.org/en/healthy-living/healthy-eating/add-color/healthy-snacking', 'Nutrition', 'Article'),
-('Water Conservation in Kitchen', 'Save water while cooking and cleaning', 'https://www.epa.gov/watersense/kitchen', 'Sustainability', 'Article'),
-('Allergen-Free Cooking', 'Tips for cooking without common allergens', 'https://www.foodallergy.org/living-food-allergies/food-allergy-essentials/managing-food-allergies', 'Food Safety', 'Article'),
-('Batch Cooking Guide', 'Efficient cooking for the week', 'https://www.bbcgoodfood.com/howto/guide/batch-cooking', 'Meal Planning', 'Article'),
-('Herb Gardening at Home', 'Grow your own herbs to reduce waste', 'https://www.gardeners.com/how-to/herb-garden/5068.html', 'Sustainability', 'Article'),
-('Fermentation Basics', 'Preserve foods through fermentation', 'https://www.culturesforhealth.com/learn/category/fermentation-basics/', 'Storage Tips', 'Article'),
-('Mindful Eating Practices', 'Develop better eating habits', 'https://www.health.harvard.edu/staying-healthy/8-steps-to-mindful-eating', 'Nutrition', 'Article'),
-('Grocery List Templates', 'Organized shopping lists to avoid waste', 'https://www.realsimple.com/food-recipes/shopping-storing/grocery-list-template', 'Budget Tips', 'Article');
-
--- Create storage bucket (run this in Supabase dashboard or via API)
--- Storage bucket for food images will be created through Supabase dashboard
--- Bucket name: food-images
--- Public: true
+('Quick Breakfast Ideas', 'Fast and healthy breakfast options for busy mornings', 'https://www.nutrition.gov/topics/nutrition-age/children/breakfast', 'Meal Planning', 'Article'),
+('Vegetable Prep Guide', 'How to wash, cut and store vegetables properly', 'https://www.fda.gov/food/buy-store-serve-safe-food/selecting-and-serving-fresh-and-frozen-seafood-safely', 'Storage Tips', 'Article'),
+('Budget Meal Prep Sunday', 'Complete guide to meal prep for the week', 'https://www.myplate.gov/eat-healthy/healthy-eating-budget/meal-planning', 'Budget Tips', 'Article'),
+('Food Safety Temperature Guide', 'Safe cooking temperatures for different foods', 'https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-temperature-chart', 'Food Safety', 'Article'),
+('Spice Storage Best Practices', 'Keep spices fresh and flavorful longer', 'https://www.fda.gov/food/buy-store-serve-safe-food/are-you-storing-food-safely', 'Storage Tips', 'Article'),
+('Plant-Based Protein Sources', 'Complete guide to vegetarian protein options', 'https://www.nutrition.gov/topics/basic-nutrition/protein', 'Nutrition', 'Article'),
+('Reducing Plastic in Kitchen', 'Eco-friendly alternatives for food storage', 'https://www.epa.gov/recycle/reducing-waste-what-you-can-do', 'Sustainability', 'Article'),
+('Fermented Foods Guide', 'Health benefits and how to make them', 'https://www.nutrition.gov/topics/basic-nutrition/food-groups', 'Nutrition', 'Article'),
+('Kids Lunch Box Ideas', 'Healthy and appealing lunches for children', 'https://www.nutrition.gov/topics/nutrition-age/children', 'Meal Planning', 'Article'),
+('Herb Garden Basics', 'Growing fresh herbs at home', 'https://www.nutrition.gov/topics/shopping-cooking-and-meal-planning', 'Sustainability', 'Article'),
+('Microwave Safety Tips', 'Proper use of microwave for reheating food', 'https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/microwave-oven-radiation', 'Food Safety', 'Article'),
+('Seasonal Recipe Collection', 'Make the most of seasonal produce', 'https://www.nutrition.gov/topics/diet-and-health-conditions/seasonal-produce-guide', 'Meal Planning', 'Article'),
+('Food Allergy Management', 'Safe practices for households with allergies', 'https://www.fda.gov/food/food-labeling-nutrition/food-allergies', 'Food Safety', 'Article'),
+('Bulk Buying Guide', 'Save money by buying in bulk smartly', 'https://www.myplate.gov/eat-healthy/healthy-eating-budget/tips-shopping', 'Budget Tips', 'Article'),
+('DIY Food Preservation', 'Canning, pickling and preserving at home', 'https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/canning-and-food-preservation', 'Storage Tips', 'Article');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Package, Calendar, Trash2, Edit, Filter } from 'lucide-react';
+import { Plus, Package, Calendar, Trash2, Edit, Filter, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
 import { differenceInDays } from 'date-fns';
@@ -27,20 +27,19 @@ const Inventory = () => {
   });
 
   const categories = [
-  'All',
-  'Fruit',
-  'Vegetable',
-  'Dairy',
-  'Protein',
-  'Grain',
-  'Pantry',
-  'Beverages',
-  'Snacks',
-  'Frozen',
-  'Condiments',
-  'Other'
-];
-
+    'All',
+    'Fruit',
+    'Vegetable',
+    'Dairy',
+    'Protein',
+    'Grain',
+    'Pantry',
+    'Beverages',
+    'Snacks',
+    'Frozen',
+    'Condiments',
+    'Other'
+  ];
 
   useEffect(() => {
     if (user) {
@@ -70,7 +69,6 @@ const Inventory = () => {
     setFoodItems(data || []);
   };
 
-  // Selecting a pre-seeded food item
   const selectFoodItem = (foodItem) => {
     setFormData({
       item_name: foodItem.name,
@@ -161,16 +159,21 @@ const Inventory = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Inventory</h1>
-          <p className="text-gray-600">Manage your food items</p>
+          <h1 className="text-4xl font-bold text-gradient-dark mb-2">Inventory</h1>
+          <p className="text-lg font-semibold" style={{ color: '#4a4a4a' }}>
+            Manage your food items
+          </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -180,78 +183,105 @@ const Inventory = () => {
             </select>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowFoodPicker(true);
               setShowForm(false);
               setEditingItem(null);
             }}
-            className="btn-outline"
+            className="btn-secondary flex items-center gap-2"
           >
+            <Search className="w-5 h-5" />
             Browse Food Items
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowForm(!showForm);
               setEditingItem(null);
               setShowFoodPicker(false);
             }}
-            className="btn-primary"
+            className="btn-primary flex items-center gap-2"
           >
-            <Plus className="w-5 h-5 inline mr-2" /> Add Item
-          </button>
+            <Plus className="w-5 h-5" />
+            Add Item
+          </motion.button>
         </div>
       </motion.div>
 
       {/* Food Items Picker Modal */}
       <AnimatePresence>
         {showFoodPicker && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-start justify-center pt-20 px-4">
-            <div className="bg-white rounded-2xl shadow-lg w-full max-w-3xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Select Food Item</h3>
-                <button onClick={() => setShowFoodPicker(false)} className="text-gray-500">
-                  Close
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowFoodPicker(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-effect rounded-3xl w-full max-w-3xl p-8 max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gradient-dark">Select Food Item</h3>
+                <button 
+                  onClick={() => setShowFoodPicker(false)} 
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
                 </button>
               </div>
 
-              <div className="space-y-4 max-h-96 overflow-auto">
+              <div className="overflow-y-auto flex-1">
                 {foodItems.length === 0 ? (
-                  <div className="text-center p-8">
-                    <Package className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                    <p className="text-gray-600">No food items available.</p>
+                  <div className="text-center p-12">
+                    <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-600 text-lg">No food items available.</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3">
+                  <div className="grid gap-4">
                     {foodItems.map(fi => (
-                      <div key={fi.id}
-                        className="flex justify-between items-center p-3 rounded-lg border">
+                      <motion.div 
+                        key={fi.id}
+                        whileHover={{ scale: 1.02 }}
+                        className="glass-effect rounded-2xl p-5 flex justify-between items-center"
+                      >
                         <div>
-                          <div className="font-semibold">
+                          <div className="font-bold text-lg text-gray-800">
                             {fi.name}{" "}
-                            <span className="text-xs text-gray-500">({fi.unit})</span>
+                            <span className="text-sm text-gray-500 font-normal">({fi.unit})</span>
                           </div>
-                          <div className="text-sm text-gray-500">{fi.category}</div>
+                          <div className="text-sm text-gray-600 mt-1">{fi.category}</div>
                         </div>
 
                         <div className="flex items-center gap-4">
-                          <div className="text-sm text-gray-700">
+                          <div className="text-lg font-bold text-gray-800">
                             ৳{Number(fi.cost_per_unit).toFixed(2)}
                           </div>
 
-                          <button onClick={() => selectFoodItem(fi)} className="btn-primary">
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => selectFoodItem(fi)} 
+                            className="btn-primary"
+                          >
                             Add
-                          </button>
+                          </motion.button>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -259,70 +289,116 @@ const Inventory = () => {
       {/* Add / Edit Form */}
       <AnimatePresence>
         {showForm && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }} className="glass-effect rounded-3xl p-8">
-
-            <h3 className="text-2xl font-bold mb-6">
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }} 
+            className="glass-effect rounded-3xl p-8 floating-shadow"
+          >
+            <h3 className="text-2xl font-bold text-gradient-dark mb-6">
               {editingItem ? "Edit" : "Add"} Inventory Item
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-
                 <div>
-                  <label className="text-sm font-semibold">Item Name *</label>
-                  <input type="text" required value={formData.item_name}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Item Name *
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={formData.item_name}
                     onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                    className="input-field" />
+                    className="input-field" 
+                  />
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold">Quantity *</label>
-                  <input type="number" required step="0.01" value={formData.quantity}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Quantity *
+                  </label>
+                  <input 
+                    type="number" 
+                    required 
+                    step="0.01" 
+                    value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    className="input-field" />
+                    className="input-field" 
+                  />
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold">Category *</label>
-                  <select value={formData.category}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Category *
+                  </label>
+                  <select 
+                    value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="input-field">
+                    className="input-field"
+                  >
                     {categories.filter(c => c !== 'All')
                       .map(cat => <option key={cat}>{cat}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold">Purchase Date</label>
-                  <input type="date" value={formData.purchase_date}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Purchase Date
+                  </label>
+                  <input 
+                    type="date" 
+                    value={formData.purchase_date}
                     onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                    className="input-field" />
+                    className="input-field" 
+                  />
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold">Expiry Date</label>
-                  <input type="date" value={formData.expiry_date}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Expiry Date
+                  </label>
+                  <input 
+                    type="date" 
+                    value={formData.expiry_date}
                     onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                    className="input-field" />
+                    className="input-field" 
+                  />
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold">Cost (BDT)</label>
-                  <input type="number" step="0.01" value={formData.cost}
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#2d2d2d' }}>
+                    Cost (BDT)
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    className="input-field" placeholder="৳0.00" />
+                    className="input-field" 
+                    placeholder="৳0.00" 
+                  />
                 </div>
-
               </div>
 
               <div className="flex gap-4">
-                <button type="submit" className="btn-primary">
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="submit" 
+                  className="btn-primary"
+                >
                   {editingItem ? "Update" : "Add"} Item
-                </button>
-                <button type="button" onClick={resetForm} className="btn-secondary">
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button" 
+                  onClick={resetForm} 
+                  className="btn-secondary"
+                >
                   Cancel
-                </button>
+                </motion.button>
               </div>
             </form>
           </motion.div>
@@ -332,49 +408,64 @@ const Inventory = () => {
       {/* Inventory Cards */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin h-12 w-12 border-t-4 border-primary-500 rounded-full"></div>
+          <div className="animate-spin h-12 w-12 border-t-4 border-gray-800 rounded-full"></div>
         </div>
       ) : filteredInventory.length === 0 ? (
-        <div className="glass-effect rounded-3xl p-12 text-center">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="glass-effect rounded-3xl p-12 text-center floating-shadow"
+        >
           <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No items found</h3>
+          <h3 className="text-xl font-bold text-gray-700 mb-2">No items found</h3>
           <p className="text-gray-600">Add items to your inventory</p>
-        </div>
+        </motion.div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredInventory.map((item, index) => {
             const expiryStatus = getExpiryStatus(item.expiry_date);
 
             return (
-              <motion.div key={item.id}
-                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              <motion.div 
+                key={item.id}
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.05 }}
-                className="glass-effect rounded-2xl p-6 card-hover">
-
-                <div className="flex justify-between mb-4">
-                  <h3 className="text-xl font-bold">{item.item_name}</h3>
+                className="stat-card card-hover floating-shadow"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-bold text-gray-800">{item.item_name}</h3>
 
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(item)}
-                      className="p-2 hover:bg-blue-50 rounded-lg">
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleEdit(item)}
+                      className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
                       <Edit className="w-4 h-4 text-blue-600" />
-                    </button>
+                    </motion.button>
 
-                    <button onClick={() => handleDelete(item.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg">
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
-                <p className="text-xl font-bold text-primary-600">Qty: {item.quantity}</p>
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${expiryStatus.color}`}>
+                <p className="text-2xl font-bold text-gray-800 mb-3">Qty: {item.quantity}</p>
+                
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${expiryStatus.color}`}>
                   {expiryStatus.label}
                 </span>
 
                 {item.cost && (
-                  <p className="mt-2 text-gray-700">
-                    <strong>৳{Number(item.cost).toFixed(2)}</strong>
+                  <p className="text-lg font-bold text-gray-700 mb-2">
+                    ৳{Number(item.cost).toFixed(2)}
                   </p>
                 )}
 

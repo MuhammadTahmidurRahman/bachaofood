@@ -91,12 +91,12 @@ const Dashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-effect rounded-3xl p-8"
       >
-        <h1 className="text-4xl font-bold gradient-text mb-2">
-          Welcome back, {profile?.full_name?.split(' ')[0] || 'there'}! 👋
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Here's your food management overview
-        </p>
+      <h1 className="text-4xl font-black text-gradient-dark mb-2 flex items-center gap-3">
+  Welcome back, there! 👋
+</h1>
+<p className="text-lg font-semibold" style={{ color: '#4a4a4a' }}>
+  Here's your food management overview
+</p>
       </motion.div>
 
       {/* Stats Grid */}
