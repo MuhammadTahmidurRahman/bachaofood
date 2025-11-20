@@ -1,0 +1,222 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Leaf, Target, Recycle, TrendingDown, ArrowRight, Sparkles } from 'lucide-react';
+
+const LandingPage = () => {
+  const features = [
+    {
+      icon: Target,
+      title: 'Zero Hunger',
+      description: 'Support SDG 2 by improving food security and nutrition',
+      color: 'from-blue-500 to-cyan-500'
+    },
+    {
+      icon: Recycle,
+      title: 'Responsible Consumption',
+      description: 'Align with SDG 12 through sustainable food practices',
+      color: 'from-green-500 to-emerald-500'
+    },
+    {
+      icon: TrendingDown,
+      title: 'Reduce Waste',
+      description: 'Cut food waste with smart tracking and planning',
+      color: 'from-orange-500 to-red-500'
+    },
+    {
+      icon: Sparkles,
+      title: 'Smart Insights',
+      description: 'Get personalized recommendations for better food management',
+      color: 'from-purple-500 to-pink-500'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen overflow-hidden">
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center px-4">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary-200/30 to-emerald-200/30 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{
+              scale: [1.2, 1, 1.2],
+              rotate: [90, 0, 90],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-blue-200/30 to-cyan-200/30 rounded-full blur-3xl"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
+          {/* Floating Icon */}
+          <motion.div
+            animate={{ y: [0, -20, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="mb-8 inline-block"
+          >
+            <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl">
+              <Leaf className="w-12 h-12 text-white" />
+            </div>
+          </motion.div>
+
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-5xl md:text-7xl font-bold mb-6"
+          >
+            <span className="gradient-text">BachaoFood</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl md:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto"
+          >
+            Smart Food Management for a Sustainable Future
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-lg text-gray-500 mb-12 max-w-2xl mx-auto"
+          >
+            Track your food, reduce waste, and contribute to Zero Hunger and Responsible Consumption
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
+            <Link to="/register">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="btn-primary flex items-center space-x-2 text-lg"
+              >
+                <span>Get Started</span>
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </Link>
+            <Link to="/login">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="btn-secondary text-lg"
+              >
+                Sign In
+              </motion.button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 px-4 relative">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
+              Why FoodWise?
+            </h2>
+            <p className="text-xl text-gray-600">
+              Empowering sustainable food practices for everyone
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="glass-effect rounded-3xl p-8 card-hover"
+                >
+                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg`}>
+                    <Icon className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-3 text-gray-800">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600 text-lg">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* SDG Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="glass-effect rounded-3xl p-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 gradient-text">
+              Supporting UN Sustainable Development Goals
+            </h2>
+            <div className="flex flex-col md:flex-row gap-8 justify-center items-center mb-8">
+              <div className="text-center">
+                <div className="text-6xl font-bold text-primary-600 mb-2">SDG 2</div>
+                <p className="text-xl font-semibold text-gray-700">Zero Hunger</p>
+              </div>
+              <div className="text-4xl text-gray-400">+</div>
+              <div className="text-center">
+                <div className="text-6xl font-bold text-emerald-600 mb-2">SDG 12</div>
+                <p className="text-xl font-semibold text-gray-700">Responsible Consumption</p>
+              </div>
+            </div>
+            <p className="text-lg text-gray-600">
+              Join us in creating a more sustainable and food-secure future for all
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 px-4 text-center text-gray-600">
+        <p>© 2024 BachaoFood. Building a sustainable future together.</p>
+      </footer>
+    </div>
+  );
+};
+
+export default LandingPage;
