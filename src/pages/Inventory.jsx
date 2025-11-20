@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Package, Calendar, DollarSign, Trash2, Edit, Filter } from 'lucide-react';
+import { Plus, Package, Calendar, Trash2, Edit, Filter } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
 import { differenceInDays } from 'date-fns';
@@ -13,53 +13,104 @@ const Inventory = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [filterCategory, setFilterCategory] = useState('All');
+  const [showFoodPicker, setShowFoodPicker] = useState(false);
+  const [foodItems, setFoodItems] = useState([]);
+
   const [formData, setFormData] = useState({
     item_name: '',
     quantity: '',
     category: 'Vegetable',
+    unit: 'piece',
     purchase_date: new Date().toISOString().split('T')[0],
     expiry_date: '',
     cost: ''
   });
 
-  const categories = ['All', 'Fruit', 'Vegetable', 'Dairy', 'Protein', 'Grain', 'Pantry', 'Other'];
+  const categories = [
+  'All',
+  'Fruit',
+  'Vegetable',
+  'Dairy',
+  'Protein',
+  'Grain',
+  'Pantry',
+  'Beverages',
+  'Snacks',
+  'Frozen',
+  'Condiments',
+  'Other'
+];
+
 
   useEffect(() => {
-    loadInventory();
+    if (user) {
+      loadInventory();
+      loadFoodItems();
+    }
   }, [user]);
 
   useEffect(() => {
-    if (filterCategory === 'All') {
-      setFilteredInventory(inventory);
-    } else {
-      setFilteredInventory(inventory.filter(item => item.category === filterCategory));
-    }
+    setFilteredInventory(
+      filterCategory === 'All'
+        ? inventory
+        : inventory.filter(item => item.category === filterCategory)
+    );
   }, [filterCategory, inventory]);
 
   const loadInventory = async () => {
+    setLoading(true);
     const { data } = await dbHelpers.getInventory(user.id);
     setInventory(data || []);
     setFilteredInventory(data || []);
     setLoading(false);
   };
 
+  const loadFoodItems = async () => {
+    const { data } = await dbHelpers.getFoodItems();
+    setFoodItems(data || []);
+  };
+
+  // Selecting a pre-seeded food item
+  const selectFoodItem = (foodItem) => {
+    setFormData({
+      item_name: foodItem.name,
+      quantity: 1,
+      category: foodItem.category || 'Other',
+      unit: foodItem.unit || 'piece',
+      purchase_date: new Date().toISOString().split('T')[0],
+      expiry_date: foodItem.expiration_days
+        ? new Date(Date.now() + foodItem.expiration_days * 86400000)
+            .toISOString()
+            .split('T')[0]
+        : '',
+      cost: Number(foodItem.cost_per_unit || 0)
+    });
+
+    setShowForm(true);
+    setShowFoodPicker(false);
+    setEditingItem(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const itemData = {
       user_id: user.id,
-      ...formData,
+      item_name: formData.item_name,
       quantity: parseFloat(formData.quantity),
+      category: formData.category,
+      purchase_date: formData.purchase_date,
+      expiry_date: formData.expiry_date || null,
       cost: formData.cost ? parseFloat(formData.cost) : null
     };
-    
+
     if (editingItem) {
-      await dbHelpers.updateInventoryItem(editingItem.id, formData);
+      await dbHelpers.updateInventoryItem(editingItem.id, itemData);
     } else {
       await dbHelpers.addInventoryItem(itemData);
     }
-    
-    loadInventory();
+
+    await loadInventory();
     resetForm();
   };
 
@@ -69,6 +120,7 @@ const Inventory = () => {
       item_name: item.item_name,
       quantity: item.quantity,
       category: item.category,
+      unit: item.unit || 'piece',
       purchase_date: item.purchase_date,
       expiry_date: item.expiry_date || '',
       cost: item.cost || ''
@@ -88,6 +140,7 @@ const Inventory = () => {
       item_name: '',
       quantity: '',
       category: 'Vegetable',
+      unit: 'piece',
       purchase_date: new Date().toISOString().split('T')[0],
       expiry_date: '',
       cost: ''
@@ -107,18 +160,17 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-      >
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold gradient-text mb-2">Inventory</h1>
           <p className="text-gray-600">Manage your food items</p>
         </div>
+
         <div className="flex gap-3">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -127,152 +179,209 @@ const Inventory = () => {
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => { setShowForm(!showForm); setEditingItem(null); }}
+
+          <button
+            onClick={() => {
+              setShowFoodPicker(true);
+              setShowForm(false);
+              setEditingItem(null);
+            }}
+            className="btn-outline"
+          >
+            Browse Food Items
+          </button>
+
+          <button
+            onClick={() => {
+              setShowForm(!showForm);
+              setEditingItem(null);
+              setShowFoodPicker(false);
+            }}
             className="btn-primary"
           >
-            <Plus className="w-5 h-5 inline mr-2" />
-            Add Item
-          </motion.button>
+            <Plus className="w-5 h-5 inline mr-2" /> Add Item
+          </button>
         </div>
       </motion.div>
 
+      {/* Food Items Picker Modal */}
+      <AnimatePresence>
+        {showFoodPicker && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex items-start justify-center pt-20 px-4">
+            <div className="bg-white rounded-2xl shadow-lg w-full max-w-3xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">Select Food Item</h3>
+                <button onClick={() => setShowFoodPicker(false)} className="text-gray-500">
+                  Close
+                </button>
+              </div>
+
+              <div className="space-y-4 max-h-96 overflow-auto">
+                {foodItems.length === 0 ? (
+                  <div className="text-center p-8">
+                    <Package className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600">No food items available.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {foodItems.map(fi => (
+                      <div key={fi.id}
+                        className="flex justify-between items-center p-3 rounded-lg border">
+                        <div>
+                          <div className="font-semibold">
+                            {fi.name}{" "}
+                            <span className="text-xs text-gray-500">({fi.unit})</span>
+                          </div>
+                          <div className="text-sm text-gray-500">{fi.category}</div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm text-gray-700">
+                            ৳{Number(fi.cost_per_unit).toFixed(2)}
+                          </div>
+
+                          <button onClick={() => selectFoodItem(fi)} className="btn-primary">
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add / Edit Form */}
       <AnimatePresence>
         {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="glass-effect rounded-3xl p-8"
-          >
-            <h3 className="text-2xl font-bold mb-6">{editingItem ? 'Edit' : 'Add'} Inventory Item</h3>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }} className="glass-effect rounded-3xl p-8">
+
+            <h3 className="text-2xl font-bold mb-6">
+              {editingItem ? "Edit" : "Add"} Inventory Item
+            </h3>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Item Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.item_name}
+                  <label className="text-sm font-semibold">Item Name *</label>
+                  <input type="text" required value={formData.item_name}
                     onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                    className="input-field"
-                  />
+                    className="input-field" />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity *</label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    value={formData.quantity}
+                  <label className="text-sm font-semibold">Quantity *</label>
+                  <input type="number" required step="0.01" value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    className="input-field"
-                  />
+                    className="input-field" />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
-                  <select
-                    value={formData.category}
+                  <label className="text-sm font-semibold">Category *</label>
+                  <select value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="input-field"
-                  >
-                    {categories.filter(c => c !== 'All').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    className="input-field">
+                    {categories.filter(c => c !== 'All')
+                      .map(cat => <option key={cat}>{cat}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Purchase Date</label>
-                  <input
-                    type="date"
-                    value={formData.purchase_date}
+                  <label className="text-sm font-semibold">Purchase Date</label>
+                  <input type="date" value={formData.purchase_date}
                     onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                    className="input-field"
-                  />
+                    className="input-field" />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={formData.expiry_date}
+                  <label className="text-sm font-semibold">Expiry Date</label>
+                  <input type="date" value={formData.expiry_date}
                     onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                    className="input-field"
-                  />
+                    className="input-field" />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Cost ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.cost}
+                  <label className="text-sm font-semibold">Cost (BDT)</label>
+                  <input type="number" step="0.01" value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    className="input-field"
-                  />
+                    className="input-field" placeholder="৳0.00" />
                 </div>
+
               </div>
+
               <div className="flex gap-4">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="btn-primary">
-                  {editingItem ? 'Update' : 'Add'} Item
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="button" onClick={resetForm} className="btn-secondary">
+                <button type="submit" className="btn-primary">
+                  {editingItem ? "Update" : "Add"} Item
+                </button>
+                <button type="button" onClick={resetForm} className="btn-secondary">
                   Cancel
-                </motion.button>
+                </button>
               </div>
             </form>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Inventory Cards */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary-500"></div>
+          <div className="animate-spin h-12 w-12 border-t-4 border-primary-500 rounded-full"></div>
         </div>
       ) : filteredInventory.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-effect rounded-3xl p-12 text-center">
+        <div className="glass-effect rounded-3xl p-12 text-center">
           <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-700 mb-2">No items found</h3>
           <p className="text-gray-600">Add items to your inventory</p>
-        </motion.div>
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredInventory.map((item, index) => {
             const expiryStatus = getExpiryStatus(item.expiry_date);
+
             return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+              <motion.div key={item.id}
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.05 }}
-                className="glass-effect rounded-2xl p-6 card-hover"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">{item.item_name}</h3>
+                className="glass-effect rounded-2xl p-6 card-hover">
+
+                <div className="flex justify-between mb-4">
+                  <h3 className="text-xl font-bold">{item.item_name}</h3>
+
                   <div className="flex gap-2">
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleEdit(item)} className="p-2 hover:bg-blue-50 rounded-lg">
+                    <button onClick={() => handleEdit(item)}
+                      className="p-2 hover:bg-blue-50 rounded-lg">
                       <Edit className="w-4 h-4 text-blue-600" />
-                    </motion.button>
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleDelete(item.id)} className="p-2 hover:bg-red-50 rounded-lg">
+                    </button>
+
+                    <button onClick={() => handleDelete(item.id)}
+                      className="p-2 hover:bg-red-50 rounded-lg">
                       <Trash2 className="w-4 h-4 text-red-600" />
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-2xl font-bold text-primary-600">Qty: {item.quantity}</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${expiryStatus.color}`}>
-                    {expiryStatus.label}
-                  </span>
-                  {item.cost && (
-                    <p className="flex items-center text-gray-600 text-sm">
-                      <DollarSign className="w-4 h-4 mr-1" />
-                      ${item.cost}
-                    </p>
-                  )}
-                  <p className="flex items-center text-gray-600 text-sm">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {new Date(item.purchase_date).toLocaleDateString()}
+
+                <p className="text-xl font-bold text-primary-600">Qty: {item.quantity}</p>
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${expiryStatus.color}`}>
+                  {expiryStatus.label}
+                </span>
+
+                {item.cost && (
+                  <p className="mt-2 text-gray-700">
+                    <strong>৳{Number(item.cost).toFixed(2)}</strong>
                   </p>
-                </div>
+                )}
+
+                <p className="text-gray-600 text-sm flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {new Date(item.purchase_date).toLocaleDateString()}
+                </p>
               </motion.div>
             );
           })}

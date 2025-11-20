@@ -5,7 +5,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Auth helpers
+// =============================
+// AUTH HELPERS
+// =============================
 export const authHelpers = {
   async getCurrentUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,18 +22,19 @@ export const authHelpers = {
         data: userData
       }
     });
-    
+
     if (data.user && !error) {
       await supabase.from('profiles').insert([{
         user_id: data.user.id,
         full_name: userData.full_name,
         household_size: userData.household_size,
         dietary_preference: userData.dietary_preference,
-        budget_range: userData.budget_range,
-        location: userData.location
+        budget_type: userData.budget_type,
+        budget_amount: userData.budget_amount,
+        location: userData.location,
       }]);
     }
-    
+
     return { data, error };
   },
 
@@ -48,25 +51,31 @@ export const authHelpers = {
   }
 };
 
-// Combined database helpers
+
+// =============================
+// DB HELPERS
+// =============================
 export const dbHelpers = {
-  // Profile
+
+  // ---- PROFILE ----
   async getProfile(userId) {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
+
     return { data, error };
   },
 
   async updateProfile(userId, updates) {
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .select()
       .single();
+
     return { data, error };
   },
 
@@ -76,21 +85,21 @@ export const dbHelpers = {
       .insert([{ user_id: userId, ...profileData }])
       .select()
       .single();
+
     return { data, error };
   },
 
-  // Food Logs
+
+  // ---- FOOD LOGS ----
   async getFoodLogs(userId, limit = 100) {
     let query = supabase
       .from('food_logs')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
-    if (limit) {
-      query = query.limit(limit);
-    }
-    
+
+    if (limit) query = query.limit(limit);
+
     const { data, error } = await query;
     return { data, error };
   },
@@ -101,6 +110,7 @@ export const dbHelpers = {
       .insert([logData])
       .select()
       .single();
+
     return { data, error };
   },
 
@@ -109,16 +119,19 @@ export const dbHelpers = {
       .from('food_logs')
       .delete()
       .eq('id', logId);
+
     return { error };
   },
 
-  // Inventory
+
+  // ---- INVENTORY ----
   async getInventory(userId) {
     const { data, error } = await supabase
       .from('inventory')
       .select('*')
       .eq('user_id', userId)
       .order('expiry_date', { ascending: true });
+
     return { data, error };
   },
 
@@ -128,6 +141,7 @@ export const dbHelpers = {
       .insert([itemData])
       .select()
       .single();
+
     return { data, error };
   },
 
@@ -138,6 +152,7 @@ export const dbHelpers = {
       .eq('id', itemId)
       .select()
       .single();
+
     return { data, error };
   },
 
@@ -146,34 +161,41 @@ export const dbHelpers = {
       .from('inventory')
       .delete()
       .eq('id', itemId);
+
     return { error };
   },
 
-  // Food Items (reference data)
+
+  // ---- FOOD ITEMS (reference) ----
   async getFoodItems() {
     const { data, error } = await supabase
       .from('food_items')
       .select('*')
-      .order('category', { ascending: true });
+      .order('name', { ascending: true }); // better UX
+
     return { data, error };
   },
 
-  // Resources
+
+  // ---- RESOURCES ----
   async getResources() {
     const { data, error } = await supabase
       .from('resources')
       .select('*')
       .order('category', { ascending: true });
+
     return { data, error };
   },
 
-  // Uploads
+
+  // ---- UPLOADS ----
   async getUploads(userId) {
     const { data, error } = await supabase
       .from('uploads')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+
     return { data, error };
   },
 
@@ -203,6 +225,7 @@ export const dbHelpers = {
       .insert([uploadData])
       .select()
       .single();
+
     return { data, error };
   }
 };
