@@ -14,7 +14,9 @@ const Profile = () => {
     location: '',
     household_size: 1,
     dietary_preference: 'none',
-    budget_range: 'medium'
+    budget_range: 'medium',
+    budget_type: 'medium',
+    budget_amount: 900
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,10 +51,11 @@ const Profile = () => {
           location: data.location || '',
           household_size: data.household_size || 1,
           dietary_preference: data.dietary_preference || 'none',
-          budget_range: data.budget_range || 'medium'
+          budget_range: data.budget_range || 'medium',
+          budget_type: data.budget_type || 'medium',
+          budget_amount: data.budget_amount || 900
         });
       } else {
-        // Profile doesn't exist, initialize with empty data
         console.log('No profile found');
         setProfile(null);
         setFormData({
@@ -60,7 +63,9 @@ const Profile = () => {
           location: '',
           household_size: 1,
           dietary_preference: 'none',
-          budget_range: 'medium'
+          budget_range: 'medium',
+          budget_type: 'medium',
+          budget_amount: 900
         });
       }
     } catch (err) {
@@ -81,7 +86,9 @@ const Profile = () => {
         location: formData.location,
         household_size: parseInt(formData.household_size),
         dietary_preference: formData.dietary_preference,
-        budget_range: formData.budget_range
+        budget_range: formData.budget_range,
+        budget_type: formData.budget_range,
+        budget_amount: formData.budget_range === 'low' ? 400 : formData.budget_range === 'medium' ? 900 : 1500
       };
 
       console.log('Saving profile data:', updatedData);

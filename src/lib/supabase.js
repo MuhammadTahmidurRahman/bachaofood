@@ -28,8 +28,6 @@ export const authHelpers = {
         household_size: userData.household_size,
         dietary_preference: userData.dietary_preference,
         budget_range: userData.budget_range,
-        budget_type: userData.budget_type,
-        budget_amount: userData.budget_amount,
         location: userData.location
       }]);
     }
@@ -199,28 +197,17 @@ export const dbHelpers = {
     return { data: data.publicUrl, error: null };
   },
 
-async saveUploadRecord(uploadData) {
-  const { data, error } = await supabase
-    .from('uploads')
-    .insert([
-      {
-        ...uploadData,
-        created_at: new Date().toISOString(),   // ✅ important for RLS stability
-      }
-    ])
-    .select()
-    .single();
-
-  return { data, error };
-},
-
-async deleteUpload(uploadId) {
-    const { error } = await supabase
+  async saveUploadRecord(uploadData) {
+    const { data, error } = await supabase
       .from('uploads')
-      .delete()
-      .eq('id', uploadId);
+      .insert([{
+        ...uploadData,
+        created_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
 
-    return { error };
+    return { data, error };
   },
 
   async deleteUpload(uploadId) {
