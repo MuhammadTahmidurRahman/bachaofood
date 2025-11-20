@@ -102,7 +102,6 @@ bachaofood/
 ├── src/
 │   ├── components/
 │   │   └── Layout.jsx
-            FreeLocationInput.jsx
 │   ├── contexts/
 │   │   └── AuthContext.jsx
 │   ├── lib/
@@ -110,6 +109,7 @@ bachaofood/
 │   ├── pages/
 │   │   ├── Dashboard.jsx
 │   │   ├── FoodLogs.jsx
+│   │   ├──  FreeLocationInput.jsx
 │   │   ├── Inventory.jsx
 │   │   ├── LandingPage.jsx
 │   │   ├── Login.jsx
