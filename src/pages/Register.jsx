@@ -1,13 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, MapPin, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, MapPin, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
+
+// FREE Location Autocomplete + Current Location (LocationIQ)
+const FreeLocationInput = React.forwardRef(({ value, onChange, error }, ref) => {
+  const inputRef = useRef(null);
+  const [suggestions, setSuggestions] = useState([]);
+
+  const searchCity = async (query) => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://api.locationiq.com/v1/autocomplete.php?key=${import.meta.env.VITE_LOCATIONIQ_TOKEN}&q=${encodeURIComponent(query)}&limit=5&tag=city,town`
+      );
+      const data = await res.json();
+      setSuggestions(data || []);
+    } catch (err) {
+      setSuggestions([]);
+    }
+  };
+
+  React.useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus()
+  }));
+
+  return (
+    <div className="relative">
+      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e);
+          searchCity(e.target.value);
+        }}
+        className={`input-field pl-12 ${error ? 'border-red-400' : ''}`}
+        placeholder="Search your city..."
+      />
+
+      {suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+          {suggestions.map((item) => (
+            <div
+              key={item.place_id}
+              onClick={() => {
+                onChange({ target: { name: 'location', value: item.display_name } });
+                setSuggestions([]);
+              }}
+              className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm"
+            >
+              {item.display_name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 const Register = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
+  const locationInputRef = useRef();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,54 +85,52 @@ const Register = () => {
     budgetRange: 'medium',
     location: ''
   });
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
+  // VALIDATION (unchanged)
   const validate = () => {
     const newErrors = {};
-    
-    if (!formData.fullName.trim()) {
+
+    if (!formData.fullName.trim())
       newErrors.fullName = 'Full name is required';
-    } else if (formData.fullName.trim().length < 2) {
+    else if (formData.fullName.trim().length < 2)
       newErrors.fullName = 'Name must be at least 2 characters';
-    }
-    
-    if (!formData.email) {
+
+    if (!formData.email)
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
+
+    if (!formData.password)
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
+    else if (formData.password.length < 6)
       newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
+
+    if (formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    if (!formData.location.trim()) {
+
+    if (!formData.location.trim())
       newErrors.location = 'Location is required';
-    }
-    
+
     return newErrors;
   };
 
+  // SUBMIT (unchanged except merged)
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const validationErrors = validate();
-    
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
+
     setLoading(true);
     setApiError('');
-    
+
     const userData = {
       full_name: formData.fullName,
       household_size: parseInt(formData.householdSize),
@@ -73,24 +138,55 @@ const Register = () => {
       budget_range: formData.budgetRange,
       location: formData.location
     };
-    
-    const { data, error } = await signUp(formData.email, formData.password, userData);
-    
+
+    const { data, error } = await signUp(
+      formData.email,
+      formData.password,
+      userData
+    );
+
     if (error) {
       setApiError(error.message || 'Failed to create account. Please try again.');
       setLoading(false);
     } else if (data.user) {
-      // Create profile
       await dbHelpers.createProfile(data.user.id, userData);
       navigate('/dashboard');
     }
   };
 
+  // HANDLE CHANGE (unchanged)
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: '' });
     }
+  };
+
+  // CURRENT LOCATION (unchanged)
+  const getMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Location not supported in your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+
+      try {
+        const res = await fetch(
+          `https://us1.locationiq.com/v1/reverse.php?key=${import.meta.env.VITE_LOCATIONIQ_TOKEN}&lat=${latitude}&lon=${longitude}&format=json`
+        );
+
+        const data = await res.json();
+        setFormData({ ...formData, location: data.display_name || 'Unknown location' });
+
+      } catch (err) {
+        alert('Could not get city name');
+      }
+    }, () => {
+      alert('Please allow location access');
+    });
   };
 
   return (
@@ -101,6 +197,7 @@ const Register = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-2xl"
       >
+
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-8">
           <motion.div
@@ -112,7 +209,7 @@ const Register = () => {
           </motion.div>
         </Link>
 
-        {/* Card */}
+        {/* CARD */}
         <div className="glass-effect rounded-3xl p-8 shadow-2xl">
           <h2 className="text-3xl font-bold text-center mb-2 gradient-text">
             Create Account
@@ -131,8 +228,10 @@ const Register = () => {
             </motion.div>
           )}
 
+          {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
+
               {/* Full Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -173,58 +272,101 @@ const Register = () => {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password *
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`input-field pl-12 ${errors.password ? 'border-red-400' : ''}`}
-                    placeholder="••••••••"
-                  />
-                </div>
-                {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
-              </div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Password *
+  </label>
+
+  <div className="relative">
+    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+    <input
+      type={showPassword ? "text" : "password"}
+      name="password"
+      value={formData.password}
+      onChange={handleChange}
+      className={`input-field pl-12 pr-12 ${errors.password ? 'border-red-400' : ''}`}
+      placeholder="••••••••"
+    />
+
+    {/* Eye Button */}
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+    >
+      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  </div>
+
+  {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+</div>
+
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`input-field pl-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
-                    placeholder="••••••••"
-                  />
-                </div>
-                {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
-              </div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Confirm Password *
+  </label>
 
-              {/* Location */}
+  <div className="relative">
+    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+    <input
+      type={showConfirmPassword ? "text" : "password"}
+      name="confirmPassword"
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      className={`input-field pl-12 pr-12 ${errors.confirmPassword ? 'border-red-400' : ''}`}
+      placeholder="••••••••"
+    />
+
+    {/* Eye Button */}
+    <button
+      type="button"
+      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+    >
+      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  </div>
+
+  {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
+</div>
+
+
+              {/* LOCATION (merged with autocomplete + current location + type) */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Location *
                 </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    className={`input-field pl-12 ${errors.location ? 'border-red-400' : ''}`}
-                    placeholder="City, Country"
-                  />
+
+                {/* Autocomplete input */}
+                <FreeLocationInput
+                  ref={locationInputRef}
+                  value={formData.location}
+                  onChange={handleChange}
+                  error={errors.location}
+                />
+
+                {/* Buttons */}
+                <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={getMyLocation}
+                    className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium text-sm py-2.5 rounded-xl transition"
+                  >
+                    Use My Current Location
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => locationInputRef.current?.focus()}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium text-sm py-2.5 rounded-xl transition"
+                  >
+                    Type Location
+                  </button>
                 </div>
+
                 {errors.location && <p className="mt-2 text-sm text-red-600">{errors.location}</p>}
               </div>
 
@@ -242,7 +384,9 @@ const Register = () => {
                     className="input-field pl-12"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                      <option key={num} value={num}>{num} {num === 1 ? 'person' : 'people'}</option>
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'person' : 'people'}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -281,15 +425,16 @@ const Register = () => {
                     onChange={handleChange}
                     className="input-field pl-12"
                   >
-                    <option value="low">Low ($)</option>
-                    <option value="medium">Medium ($$)</option>
-                    <option value="high">High ($$$)</option>
+                    <option value="low">Low (300–500 taka)</option>
+                    <option value="medium">Medium (600–1200 taka)</option>
+                    <option value="high">High (1200+ taka)</option>
                   </select>
                 </div>
               </div>
+
             </div>
 
-            {/* Submit Button */}
+            {/* SUBMIT BUTTON */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -308,7 +453,7 @@ const Register = () => {
             </motion.button>
           </form>
 
-          {/* Login Link */}
+          {/* LOGIN LINK */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{' '}
