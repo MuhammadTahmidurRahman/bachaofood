@@ -1,353 +1,286 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { User, MapPin, Users, DollarSign, Save, Edit2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { dbHelpers } from '../lib/supabase';
-import FreeLocationInput from './FreeLocationInput';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { MapPin, Users, DollarSign, Save, Edit2 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 
 const Profile = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+
   const [formData, setFormData] = useState({
-    full_name: '',
-    location: '',
+    full_name: "",
+    location: "",
     household_size: 1,
-    dietary_preference: 'none',
-    budget_range: 'medium'
+    dietary_preference: "none",
+    budget_range: "medium",
+    budget_amount: "",
+    budget_type: "monthly",
   });
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const locationInputRef = useRef();
+  const [isEditing, setIsEditing] = useState(false);
+  const [message, setMessage] = useState("");
 
+  // Load profile + metadata
   useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
+    if (user) loadProfile();
   }, [user]);
 
   const loadProfile = async () => {
-    setLoading(true);
-    console.log('Loading profile for user:', user.id);
-    
-    try {
-      const { data, error } = await dbHelpers.getProfile(user.id);
+    const { data: db, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-      console.log('Profile data:', data);
-      console.log('Profile error:', error);
+    const meta = user.user_metadata || {};
 
-      if (error) {
-        console.error('Error loading profile:', error);
-        setMessage('Error loading profile');
-      }
+    const merged = {
+      full_name: db?.full_name || meta.full_name || "",
+      location: db?.location || meta.location || "",
+      household_size: db?.household_size || meta.household_size || 1,
+      dietary_preference:
+        db?.dietary_preference || meta.dietary_preference || "none",
+      budget_range: db?.budget_range || meta.budget_range || "medium",
+      budget_amount: db?.budget_amount || meta.budget_amount || "",
+      budget_type: db?.budget_type || meta.budget_type || "monthly",
+    };
 
-      if (data) {
-        setProfile(data);
-        setFormData({
-          full_name: data.full_name || '',
-          location: data.location || '',
-          household_size: data.household_size || 1,
-          dietary_preference: data.dietary_preference || 'none',
-          budget_range: data.budget_range || 'medium'
-        });
-      } else {
-        // Profile doesn't exist, initialize with empty data
-        console.log('No profile found');
-        setProfile(null);
-        setFormData({
-          full_name: '',
-          location: '',
-          household_size: 1,
-          dietary_preference: 'none',
-          budget_range: 'medium'
-        });
-      }
-    } catch (err) {
-      console.error('Exception loading profile:', err);
-      setMessage('Error loading profile');
-    } finally {
-      setLoading(false);
-    }
+    setFormData(merged);
+    setLoading(false);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    setMessage('');
+  // Save (UPSERT)
+const handleSave = async () => {
+  setSaving(true);
+  setMessage("");
 
-    try {
-      const updatedData = {
-        full_name: formData.full_name,
-        location: formData.location,
-        household_size: parseInt(formData.household_size),
-        dietary_preference: formData.dietary_preference,
-        budget_range: formData.budget_range
-      };
-
-      console.log('Saving profile data:', updatedData);
-
-      const { data, error } = await dbHelpers.updateProfile(user.id, updatedData);
-
-      console.log('Update response:', data, error);
-
-      if (error) {
-        setMessage('Error updating profile');
-        console.error('Update error:', error);
-      } else {
-        setMessage('Profile updated successfully!');
-        setProfile(data);
-        setIsEditing(false);
-        setTimeout(() => setMessage(''), 3000);
-      }
-    } catch (err) {
-      console.error('Exception updating profile:', err);
-      setMessage('Error updating profile');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const getMyLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Location not supported in your browser');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-
-      try {
-        const res = await fetch(
-          `https://us1.locationiq.com/v1/reverse.php?key=${import.meta.env.VITE_LOCATIONIQ_TOKEN}&lat=${latitude}&lon=${longitude}&format=json`
-        );
-
-        const data = await res.json();
-        setFormData({ ...formData, location: data.display_name || 'Unknown location' });
-
-      } catch (err) {
-        alert('Could not get city name');
-      }
-    }, () => {
-      alert('Please allow location access');
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary-500"></div>
-      </div>
-    );
+  if (!formData.full_name.trim()) {
+    setMessage("Full name is required.");
+    setSaving(false);
+    return;
   }
 
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      user_id: user.id,
+      ...formData,
+      budget_amount: String(formData.budget_amount || ""), // ensure TEXT type
+      updated_at: new Date(),
+    },
+    { onConflict: "user_id" } // 🔥 FIX: tells Supabase to update the existing row
+  );
+
+  if (error) {
+    console.error(error);
+    setMessage("Error saving profile.");
+  } else {
+    setMessage("Profile updated successfully!");
+    setIsEditing(false);
+  }
+
+  setSaving(false);
+};
+
+
+  if (loading) return <div className="text-center py-10">Loading...</div>;
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-effect rounded-3xl p-8"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-emerald-600 rounded-2xl flex items-center justify-center">
-              <User className="w-10 h-10 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold gradient-text">Your Profile</h1>
-              <p className="text-gray-600">{user?.email}</p>
-            </div>
+    <div className="max-w-3xl mx-auto p-6">
+      <motion.div className="glass-effect p-6 rounded-3xl shadow-xl">
+        <div className="flex justify-between mb-6 items-center">
+          <div>
+            <h2 className="text-3xl font-bold">Your Profile</h2>
+            <p className="text-gray-600">{user.email}</p>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={() => setIsEditing(!isEditing)}
-            className={isEditing ? 'btn-secondary' : 'btn-primary'}
+            className="btn-primary flex items-center gap-2"
           >
-            <Edit2 className="w-4 h-4 inline mr-2" />
-            {isEditing ? 'Cancel' : 'Edit Profile'}
-          </motion.button>
+            <Edit2 size={16} />
+            {isEditing ? "Cancel" : "Edit"}
+          </button>
         </div>
 
         {message && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-6 p-4 rounded-xl ${
-              message.includes('Error')
-                ? 'bg-red-50 text-red-700'
-                : 'bg-green-50 text-green-700'
-            }`}
-          >
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
             {message}
-          </motion.div>
+          </div>
         )}
 
-        <div className="space-y-6">
-          {/* Full Name */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Full Name
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                className="input-field"
-              />
-            ) : (
-              <p className="text-lg text-gray-800 font-medium">
-                {formData.full_name || 'Not set'}
-              </p>
-            )}
-          </div>
+        <Field
+          label="Full Name"
+          value={formData.full_name}
+          edit={isEditing}
+          onChange={(e) =>
+            setFormData({ ...formData, full_name: e.target.value })
+          }
+        />
 
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              <MapPin className="w-4 h-4 mr-2" />
-              Location
-            </label>
-            {isEditing ? (
-              <>
-                <FreeLocationInput
-                  ref={locationInputRef}
-                  value={formData.location}
-                  onChange={handleChange}
-                  error={false}
-                />
+        <Field
+          icon={<MapPin size={16} />}
+          label="Location"
+          value={formData.location}
+          edit={isEditing}
+          onChange={(e) =>
+            setFormData({ ...formData, location: e.target.value })
+          }
+        />
 
-                <div className="mt-3 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={getMyLocation}
-                    className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium text-sm py-2.5 rounded-xl transition"
-                  >
-                    Use My Current Location
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => locationInputRef.current?.focus()}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium text-sm py-2.5 rounded-xl transition"
-                  >
-                    Type Location
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-lg text-gray-800 font-medium">
-                {formData.location || 'Not set'}
-              </p>
-            )}
-          </div>
-
-          {/* Household Size */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              <Users className="w-4 h-4 mr-2" />
-              Household Size
-            </label>
-            {isEditing ? (
+        <Field
+          icon={<Users size={16} />}
+          label="Household Size"
+          raw
+          value={
+            isEditing ? (
               <select
-                name="household_size"
                 value={formData.household_size}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    household_size: parseInt(e.target.value),
+                  })
+                }
                 className="input-field"
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                  <option key={num} value={num}>
-                    {num} {num === 1 ? 'person' : 'people'}
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
                   </option>
                 ))}
               </select>
             ) : (
-              <p className="text-lg text-gray-800 font-medium">
-                {formData.household_size || 1}{' '}
-                {formData.household_size === 1 ? 'person' : 'people'}
-              </p>
-            )}
-          </div>
+              formData.household_size + " people"
+            )
+          }
+        />
 
-          {/* Dietary Preference */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Dietary Preference
-            </label>
-            {isEditing ? (
+        <Field
+          label="Dietary Preference"
+          raw
+          value={
+            isEditing ? (
               <select
-                name="dietary_preference"
                 value={formData.dietary_preference}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    dietary_preference: e.target.value,
+                  })
+                }
                 className="input-field"
               >
-                <option value="none">No Restrictions</option>
+                <option value="none">None</option>
                 <option value="vegetarian">Vegetarian</option>
                 <option value="vegan">Vegan</option>
-                <option value="pescatarian">Pescatarian</option>
                 <option value="halal">Halal</option>
                 <option value="kosher">Kosher</option>
               </select>
             ) : (
-              <p className="text-lg text-gray-800 font-medium capitalize">
-                {formData.dietary_preference === 'none' ? 'No Restrictions' : formData.dietary_preference}
-              </p>
-            )}
-          </div>
+              formData.dietary_preference
+            )
+          }
+        />
 
-          {/* Budget Range */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Budget Range
-            </label>
-            {isEditing ? (
+        <Field
+          icon={<DollarSign size={16} />}
+          label="Budget Range"
+          raw
+          value={
+            isEditing ? (
               <select
-                name="budget_range"
                 value={formData.budget_range}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({ ...formData, budget_range: e.target.value })
+                }
                 className="input-field"
               >
-                <option value="low">Low (300–500 taka)</option>
-                <option value="medium">Medium (600–1200 taka)</option>
-                <option value="high">High (1200+ taka)</option>
+                <option value="low">Low ($)</option>
+                <option value="medium">Medium ($$)</option>
+                <option value="high">High ($$$)</option>
               </select>
             ) : (
-              <p className="text-lg text-gray-800 font-medium capitalize">
-                {formData.budget_range === 'low' && 'Low (300–500 taka)'}
-                {formData.budget_range === 'medium' && 'Medium (600–1200 taka)'}
-                {formData.budget_range === 'high' && 'High (1200+ taka)'}
-              </p>
-            )}
-          </div>
+              formData.budget_range
+            )
+          }
+        />
 
-          {isEditing && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-primary w-full disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : (
-                <>
-                  <Save className="w-4 h-4 inline mr-2" />
-                  Save Changes
-                </>
-              )}
-            </motion.button>
-          )}
-        </div>
+        <Field
+          label="Budget Amount (Taka)"
+          raw
+          value={
+            isEditing ? (
+              <input
+                type="number"
+                className="input-field"
+                value={formData.budget_amount}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    budget_amount: e.target.value,
+                  })
+                }
+              />
+            ) : (
+              formData.budget_amount || "Not set"
+            )
+          }
+        />
+
+        <Field
+          label="Budget Type"
+          raw
+          value={
+            isEditing ? (
+              <select
+                value={formData.budget_type}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    budget_type: e.target.value,
+                  })
+                }
+                className="input-field"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            ) : (
+              formData.budget_type
+            )
+          }
+        />
+
+        {isEditing && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary w-full mt-4"
+          >
+            {saving ? "Saving..." : <><Save size={16} /> Save Changes</>}
+          </button>
+        )}
       </motion.div>
     </div>
   );
 };
+
+const Field = ({ label, value, icon, edit, onChange, raw }) => (
+  <div className="mb-5">
+    <label className="block text-gray-700 font-semibold mb-1 flex gap-2 items-center">
+      {icon} {label}
+    </label>
+
+    {raw ? (
+      value
+    ) : edit ? (
+      <input type="text" className="input-field" value={value} onChange={onChange} />
+    ) : (
+      <p className="text-gray-900 text-lg">{value || "Not set"}</p>
+    )}
+  </div>
+);
 
 export default Profile;
