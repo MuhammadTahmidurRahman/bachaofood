@@ -312,8 +312,7 @@ const Profile = () => {
           {/* Budget Range */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Budget Range
+              Weekly Budget Range
             </label>
             {isEditing ? (
               <select
