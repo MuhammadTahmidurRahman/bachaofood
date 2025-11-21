@@ -547,7 +547,7 @@ const MealOptimizer = () => {
                 placeholder="1000"
                 min="100"
               />
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Recommended: ৳800-1500 per week for balanced nutrition
@@ -606,7 +606,7 @@ const MealOptimizer = () => {
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-white" />
+                  
                 </div>
                 <div>
                   <div className="text-3xl font-black text-gray-800">৳{mealPlan.totalCost}</div>
