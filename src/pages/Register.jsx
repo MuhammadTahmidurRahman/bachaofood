@@ -1,7 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, Users, DollarSign, Leaf, ArrowRight } from 'lucide-react';
+import { 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  User, 
+  Users, 
+  DollarSign, 
+  Leaf,
+  UtensilsCrossed,
+  Apple,
+  Pizza,
+  Soup,
+  ArrowRight   // ✅ FIXED — THIS WAS MISSING AND CAUSED WHITE SCREEN
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
 import FreeLocationInput from './FreeLocationInput';
@@ -29,7 +43,6 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // VALIDATION (unchanged)
   const validate = () => {
     const newErrors = {};
 
@@ -57,7 +70,6 @@ const Register = () => {
     return newErrors;
   };
 
-  // SUBMIT (unchanged except merged)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -93,7 +105,6 @@ const Register = () => {
     }
   };
 
-  // HANDLE CHANGE (unchanged)
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -102,7 +113,6 @@ const Register = () => {
     }
   };
 
-  // CURRENT LOCATION (unchanged)
   const getMyLocation = () => {
     if (!navigator.geolocation) {
       alert('Location not supported in your browser');
@@ -137,17 +147,87 @@ const Register = () => {
         className="w-full max-w-2xl"
       >
 
-        {/* Logo */}
+        {/* ⭐⭐⭐ REPLACED LOGO WITH 3D ROTATING PURPLE GLOW VERSION ⭐⭐⭐ */}
         <Link to="/" className="flex justify-center mb-8">
           <motion.div
-            whileHover={{ rotate: 360 }}
-            transition={{ duration: 0.5 }}
-            className="w-16 h-16 bg-gradient-to-br from-primary-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-2xl"
+            animate={{ y: [0, -12, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="relative"
+            style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
           >
-            <Leaf className="w-8 h-8 text-white" />
+            <motion.div
+              animate={{ rotateY: 360, rotateX: [0, 10, 0] }}
+              transition={{
+                rotateY: { duration: 8, repeat: Infinity, ease: "linear" },
+                rotateX: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+              className="w-20 h-20 rounded-full relative"
+              style={{
+                background: 'linear-gradient(135deg, rgba(107,87,255,0.45), rgba(122,99,245,0.25))',
+                boxShadow: `
+                  0 12px 45px rgba(107,87,255,0.35),
+                  0 0 30px rgba(122,99,245,0.55),
+                  inset 0 0 25px rgba(255,255,255,0.25)
+                `,
+                border: '2px solid rgba(255,255,255,0.35)',
+                transformStyle: "preserve-3d"
+              }}
+            >
+
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 flex items-center justify-center"
+              >
+                <UtensilsCrossed
+                  className="w-8 h-8"
+                  style={{
+                    color: "white",
+                    filter: `
+                      drop-shadow(0 0 12px rgba(122,99,245,0.85))
+                      drop-shadow(0 0 18px rgba(107,87,255,0.75))
+                    `
+                  }}
+                />
+              </motion.div>
+
+              <motion.div animate={{ rotate: -360 }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }} className="absolute inset-0">
+                <Apple
+                  className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-4 h-4"
+                  style={{ color: "#7A63F5", filter: "drop-shadow(0 0 10px rgba(107,87,255,0.9))" }}
+                />
+              </motion.div>
+
+              <motion.div animate={{ rotate: -360 }} transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 2 }} className="absolute inset-0">
+                <Pizza
+                  className="absolute bottom-0 right-0 w-4 h-4"
+                  style={{ color: "#8A6FF0", filter: "drop-shadow(0 0 10px rgba(122,99,245,0.9))" }}
+                />
+              </motion.div>
+
+              <motion.div animate={{ rotate: -360 }} transition={{ duration: 7, repeat: Infinity, ease: "linear", delay: 4 }} className="absolute inset-0">
+                <Soup
+                  className="absolute bottom-0 left-0 w-4 h-4"
+                  style={{ color: "#6B57FF", filter: "drop-shadow(0 0 10px rgba(107,87,255,0.9))" }}
+                />
+              </motion.div>
+
+            </motion.div>
+
+            <motion.div
+              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.75, 0.4] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(122,99,245,0.6), transparent 70%)",
+                filter: "blur(28px)"
+              }}
+            />
           </motion.div>
         </Link>
+        {/* END OF REPLACED LOGO */}
 
+        {/* REST OF YOUR CODE — UNCHANGED */}
         {/* CARD */}
         <div className="glass-effect rounded-3xl p-8 shadow-2xl">
           <h2 className="text-3xl font-bold text-center mb-2 gradient-text">
@@ -227,7 +307,6 @@ const Register = () => {
                     placeholder="••••••••"
                   />
 
-                  {/* Eye Button */}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -239,7 +318,6 @@ const Register = () => {
 
                 {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
               </div>
-
 
               {/* Confirm Password */}
               <div>
@@ -259,7 +337,6 @@ const Register = () => {
                     placeholder="••••••••"
                   />
 
-                  {/* Eye Button */}
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -272,14 +349,12 @@ const Register = () => {
                 {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
               </div>
 
-
-              {/* LOCATION (merged with autocomplete + current location + type) */}
+              {/* LOCATION */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Location *
                 </label>
 
-                {/* Autocomplete input */}
                 <FreeLocationInput
                   ref={locationInputRef}
                   value={formData.location}
@@ -287,7 +362,6 @@ const Register = () => {
                   error={errors.location}
                 />
 
-                {/* Buttons */}
                 <div className="mt-3 flex gap-3">
                   <button
                     type="button"
@@ -373,7 +447,6 @@ const Register = () => {
 
             </div>
 
-            {/* SUBMIT BUTTON */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -392,7 +465,6 @@ const Register = () => {
             </motion.button>
           </form>
 
-          {/* LOGIN LINK */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{' '}

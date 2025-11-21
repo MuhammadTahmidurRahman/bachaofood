@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Leaf, Target, Recycle, TrendingDown, ArrowRight, Sparkles } from 'lucide-react';
+import { Leaf, Target, Recycle, TrendingDown, ArrowRight, Sparkles, UtensilsCrossed, Apple, Pizza, Soup } from 'lucide-react';
 
 const LandingPage = () => {
   const features = [
@@ -64,14 +64,119 @@ const LandingPage = () => {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto text-center">
-          {/* Floating Icon */}
+
+          {/* ------------------------------------------------ */}
+          {/* 🌟 UPDATED: 3D Rotating Logo with NEW PURPLE Glow */}
+          {/* ------------------------------------------------ */}
           <motion.div
             animate={{ y: [0, -20, 0] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="mb-8 inline-block"
+            className="mb-10 flex justify-center"
           >
-            <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl">
-              <Leaf className="w-12 h-12 text-white" />
+            <div
+              className="relative"
+              style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+            >
+
+              {/* Rotating Plate */}
+              <motion.div
+                animate={{
+                  rotateY: 360,
+                  rotateX: [0, 10, 0]
+                }}
+                transition={{
+                  rotateY: { duration: 8, repeat: Infinity, ease: "linear" },
+                  rotateX: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
+                className="w-24 h-24 rounded-full relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(107, 87, 255, 0.4), rgba(122, 99, 245, 0.25))',
+                  boxShadow: `
+                    0 12px 45px rgba(107, 87, 255, 0.35),
+                    0 0 30px rgba(122, 99, 245, 0.55),
+                    inset 0 0 25px rgba(255, 255, 255, 0.25)
+                  `,
+                  border: '2px solid rgba(255, 255, 255, 0.35)',
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+
+                {/* Center Icon */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <UtensilsCrossed
+                    className="w-10 h-10"
+                    style={{
+                      color: "white",
+                      filter: `
+                        drop-shadow(0 0 12px rgba(122, 99, 245, 0.85))
+                        drop-shadow(0 0 18px rgba(107, 87, 255, 0.75))
+                      `
+                    }}
+                  />
+                </motion.div>
+
+                {/* Orbiting Icons */}
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0"
+                >
+                  <Apple
+                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-5 h-5"
+                    style={{
+                      color: "#7A63F5",
+                      filter: "drop-shadow(0 0 10px rgba(107, 87, 255, 0.9))"
+                    }}
+                  />
+                </motion.div>
+
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 2 }}
+                  className="absolute inset-0"
+                >
+                  <Pizza
+                    className="absolute bottom-0 right-0 w-5 h-5"
+                    style={{
+                      color: "#8A6FF0",
+                      filter: "drop-shadow(0 0 10px rgba(122, 99, 245, 0.9))"
+                    }}
+                  />
+                </motion.div>
+
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 7, repeat: Infinity, ease: "linear", delay: 4 }}
+                  className="absolute inset-0"
+                >
+                  <Soup
+                    className="absolute bottom-0 left-0 w-5 h-5"
+                    style={{
+                      color: "#6B57FF",
+                      filter: "drop-shadow(0 0 10px rgba(107, 87, 255, 0.9))"
+                    }}
+                  />
+                </motion.div>
+
+              </motion.div>
+
+              {/* Glow Layer */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.4, 1],
+                  opacity: [0.4, 0.75, 0.4]
+                }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(122, 99, 245, 0.6), transparent 70%)',
+                  filter: 'blur(28px)'
+                }}
+              />
             </div>
           </motion.div>
 
