@@ -1,103 +1,72 @@
-# 🌿 BachaoFood - Smart Food Management Platform
+```md
+# 🍽️ BachaoFood  
+Smart Food Management for Sustainability  
 
-A modern full-stack web application supporting UN SDG 2 (Zero Hunger) and SDG 12 (Responsible Consumption) through intelligent food tracking and sustainability features.
+BachaoFood is a full-featured food management system designed to reduce food waste, track consumption, and support UN SDG goals (Zero Hunger & Responsible Consumption).  
+This project includes inventory tracking, food logging, smart insights, recommendations, and interactive dashboards powered by **React**, **Supabase**, **TailwindCSS**, **Framer Motion**, and **Recharts**.
 
-## 🎯 Project Overview
+---
 
-BachaoFood helps individuals and communities reduce food waste, manage inventories, and make sustainable food choices through an intuitive interface with real-time tracking and smart recommendations.
+## 🚀 Features
 
-## 🚀 Tech Stack
+### ✅ **User Authentication**
+- Secure login & registration via Supabase Auth  
+- Protected routes & global user context  
 
-- **Frontend**: React 18 + Vite
-- **Styling**: TailwindCSS + Framer Motion
-- **Backend/Database**: Supabase (PostgreSQL + Authentication + Storage)
-- **Charts**: Recharts
-- **Icons**: Lucide React
-- **Date Utilities**: date-fns
+### 🧺 **Inventory Management**
+- Add/edit/delete inventory items  
+- Auto quantity tracking  
+- Expiry countdown indicators  
+- Smart food picker (preloaded food items)  
+- Filtering by category  
+- Clean UI with animations  
 
-## ✨ Features Implemented
+### 📝 **Food Logging System**
+- Log consumption of food items  
+- Quantity auto-deducted from inventory (FIFO by expiry date)  
+- Deletion reverts quantity back to inventory  
+- Inventory-linked dropdown for quick log entry  
 
-✅ **Authentication & User Management**
-- Email/password registration and login
-- Form validation
-- User profiles with dietary preferences and budget settings
+### 📊 **Smart Dashboard**
+- Inventory statistics  
+- Recent activity  
+- Category distribution charts (PieChart)  
+- Personalized recommendations based on user logs  
+- Budget range display  
+- Animated UI with framer-motion  
 
-✅ **User Profile & Consumption Logging**
-- Editable profile page
-- Manual food logging
-- Consumption history tracking
+### 📍 **Location Search**
+- LocationIQ-powered autocomplete  
+- Reusable component for city/town search  
 
-✅ **Food Items & Inventory Management**
-- Seeded database with 20+ food items
-- CRUD operations for inventory
-- Expiry date tracking with visual alerts
-- Category filtering
+### 🌏 **Sustainability Focus**
+- SDG 2: Zero Hunger  
+- SDG 12: Responsible Consumption & Production  
+- Insight-driven prompts for reducing waste  
 
-✅ **Resources for Sustainability**
-- 20+ curated resources
-- Smart recommendations
-- Category-based filtering
+---
 
-✅ **Basic Tracking Logic**
-- Dashboard with statistics
-- Category distribution charts
-- Recent activity timeline
+## 🛠️ Tech Stack
 
-✅ **Image Upload Interface**
-- Drag-and-drop file upload
-- Support for JPG/PNG images
+### **Frontend**
+- React (Vite)  
+- TailwindCSS  
+- Framer Motion  
+- Recharts  
+- Lucide Icons  
+- React Router  
 
-✅ **User Dashboard & UI**
-- Responsive glass-morphism design
-- Smooth animations
-- Mobile-friendly navigation
+### **Backend**
+- Supabase (Authentication + PostgreSQL Database)  
+- Custom SQL schema  
+- Supabase client helpers  
 
-## 🛠️ Setup Instructions
+---
 
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-### 2. Supabase Setup
-
-1. Create account at [Supabase](https://supabase.com)
-2. Create a new project
-3. Go to Project Settings > API
-4. Copy your project URL and anon public key
-
-### 3. Database Setup
-
-1. In Supabase dashboard, go to SQL Editor
-2. Copy content from `supabase-schema.sql`
-3. Paste and run in SQL Editor
-
-### 4. Storage Setup
-
-1. Go to Storage in Supabase dashboard
-2. Create bucket called `food-images`
-3. Set it to **Public**
-
-### 5. Environment Configuration
-
-The `.env` file is already configured with your credentials:
-```
-VITE_SUPABASE_URL=https://lrexsowzgvyypvgquaim.supabase.co
-VITE_SUPABASE_ANON_KEY=your-key-here
-```
-
-### 6. Run Development Server
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000`
-
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
+
 bachaofood/
 ├── src/
 │   ├── components/
@@ -105,83 +74,105 @@ bachaofood/
 │   ├── contexts/
 │   │   └── AuthContext.jsx
 │   ├── lib/
+│   │   └── aiService.js
 │   │   └── supabase.js
+|   |   └──receiptParser.js
 │   ├── pages/
 │   │   ├── Dashboard.jsx
 │   │   ├── FoodLogs.jsx
-│   │   ├──  FreeLocationInput.jsx
+│   │   ├── FreeLocationInput.jsx
 │   │   ├── Inventory.jsx
 │   │   ├── LandingPage.jsx
 │   │   ├── Login.jsx
-│   │   ├── Profile.jsx
 │   │   ├── Register.jsx
 │   │   ├── Resources.jsx
+│   │   ├── AIDashboard.jsx
+│   │   ├── MealOptimizer.jsx
+│   │   ├── NourishBot.jsx
 │   │   └── Upload.jsx
+│   ├── utils/
+│   │   ├── ocr.js
 │   ├── App.jsx
 │   ├── main.jsx
 │   └── index.css
+
 ├── supabase-schema.sql
 ├── package.json
 ├── vite.config.js
 ├── tailwind.config.js
 ├── postcss.config.js
 └── .env
-```
 
-## 🛠 Troubleshooting
-
-**Database errors?**
-- Verify `.env` credentials
-- Check Supabase dashboard for SQL errors
-- Ensure Row Level Security policies are active
-
-**Upload not working?**
-- Confirm `food-images` bucket exists
-- Set bucket to public
-- Check browser console for errors
-
-**Build errors?**
-- Clear node_modules: `rm -rf node_modules && npm install`
-- Clear cache: `npm run build -- --force`
-
-## 🎯 All Requirements Met
-
-✅ Authentication (email/password with validation)
-✅ User Profile (editable with all required fields)
-✅ Food Items Database (20+ items seeded)
-✅ Resources Database (20+ resources seeded)
-✅ Basic Tracking Logic (dashboard with stats and recommendations)
-✅ Image Upload (drag-and-drop interface)
-✅ User Dashboard (responsive with charts)
-✅ Code Quality (modular, clean, documented)
-
-## 🚢 Deployment
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Deploy to Netlify
-
-1. Push code to GitHub
-2. Connect repository to Netlify
-3. Build settings:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-4. Add environment variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-
-## 📄 License
-
-MIT License
-
-## 👏 Acknowledgments
-
-Built for INNOVATEX Hackathon with modern web technologies and sustainable design principles.
+````
 
 ---
 
-**Good luck with your hackathon! 🚀**
+## ⚙️ Setup & Installation
+
+### 1️⃣ Clone the repository  
+```sh
+git clone https://github.com/MuhammadTahmidurRahman/bachaofood.git
+cd bachaofood
+````
+
+### 2️⃣ Install dependencies
+
+```sh
+npm install
+```
+
+### 3️⃣ Configure environment variables
+
+Create a `.env` file:
+
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_LOCATIONIQ_TOKEN=your_locationiq_api_key
+```
+
+### 4️⃣ Run the development server
+
+```sh
+npm run dev
+```
+
+---
+
+## 🗄️ Database Schema
+
+All SQL tables and definitions are included in:
+
+```
+supabase-schema.sql
+```
+
+---
+
+## 📸 Screens & UI Highlights
+
+* Animated Landing Page with 3D rotating logo
+* Modern dashboard with charts & recommendations
+* Inventory cards with expiry indicators
+* Smooth modal transitions for food picker
+* Clean, minimalist UI with glassmorphism
+
+---
+
+## 🤝 Contributors
+
+* **Muhammad Tahmidur Rahman**
+* **Anika Tabassum**
+* **Mohosina Islam Disha**
+
+---
+
+## 📄 License
+
+MIT © 2025
+Muhammad Tahmidur Rahman
+Anika Tabassum
+Mohosina Islam Disha
+
+```
+```
