@@ -167,14 +167,25 @@ const MealOptimizer = () => {
     
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const mealPlan = [];
+    // usedInventoryItems will store the full item object {id, item_name, ...}
     const usedInventoryItems = [];
     const shoppingList = [];
     const shoppingMap = {};
     
     let totalCost = 0;
     let nutritionScoreSum = 0;
+
+    // --- CRITICAL DIVERSITY FIX: Track meals used this week ---
+    const mealNameHistory = [];
+    // -----------------------------------------------------------
     
     for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      // Use numbers for accumulation
+      let dailyProtein = 0;
+      let dailyCarbs = 0;
+      let dailyFiber = 0;
+      let dailyCalories = 0;
+
       const dayMeals = {
         day: days[dayIdx],
         breakfast: '',
@@ -182,29 +193,29 @@ const MealOptimizer = () => {
         dinner: '',
         dailyCost: 0,
         usedItems: [],
-        nutritionSummary: {
-          protein: '0g',
-          carbs: '0g',
-          fiber: '0g',
-          totalCal: 0
-        }
+        nutritionSummary: {} // Will be formatted later
       };
       
       // Generate each meal
       const meals = ['breakfast', 'lunch', 'dinner'];
       
       for (const mealType of meals) {
+        // Pass the day and meal index for diversity, and the history
         const mealResult = generateMeal(
           mealType, 
           mealBudget, 
           sortedInventory, 
           usedInventoryItems,
-          weights
+          weights,
+          dayIdx * 3 + meals.indexOf(mealType),
+          mealNameHistory // <-- Pass history here
         );
         
         dayMeals[mealType] = mealResult.name;
+        mealNameHistory.push(mealResult.name); // <-- Update history here
+        
         dayMeals.dailyCost += mealResult.cost;
-        dayMeals.usedItems.push(...mealResult.inventoryUsed);
+        dayMeals.usedItems.push(...mealResult.inventoryUsed.map(i => i.item_name)); // Store names
         
         // Add to shopping list
         mealResult.ingredients.forEach(ing => {
@@ -223,44 +234,80 @@ const MealOptimizer = () => {
           }
         });
         
-        // Update nutrition
-        dayMeals.nutritionSummary.protein = `${(parseFloat(dayMeals.nutritionSummary.protein) + mealResult.nutrition.protein).toFixed(0)}g`;
-        dayMeals.nutritionSummary.carbs = `${(parseFloat(dayMeals.nutritionSummary.carbs) + mealResult.nutrition.carbs).toFixed(0)}g`;
-        dayMeals.nutritionSummary.fiber = `${(parseFloat(dayMeals.nutritionSummary.fiber) + mealResult.nutrition.fiber).toFixed(0)}g`;
-        dayMeals.nutritionSummary.totalCal += mealResult.nutrition.calories;
+        // Update nutrition totals (using numbers)
+        dailyProtein += mealResult.nutrition.protein;
+        dailyCarbs += mealResult.nutrition.carbs;
+        dailyFiber += mealResult.nutrition.fiber;
+        dailyCalories += mealResult.nutrition.calories;
       }
       
       totalCost += dayMeals.dailyCost;
       dayMeals.dailyCost = Math.round(dayMeals.dailyCost);
-      nutritionScoreSum += calculateMealNutritionScore(dayMeals.nutritionSummary);
+
+      // Format nutrition for display and calculate score
+      const nutritionForScore = {
+        protein: dailyProtein,
+        carbs: dailyCarbs,
+        fiber: dailyFiber,
+        totalCal: dailyCalories
+      };
+
+      dayMeals.nutritionSummary = {
+        protein: `${dailyProtein.toFixed(0)}g`,
+        carbs: `${dailyCarbs.toFixed(0)}g`,
+        fiber: `${dailyFiber.toFixed(0)}g`,
+        calories: Math.round(dailyCalories) // Renamed key to 'calories' to match previous sample
+      };
+
+      nutritionScoreSum += calculateMealNutritionScore(nutritionForScore);
       
       mealPlan.push(dayMeals);
     }
     
     // Convert shopping map to list
     Object.values(shoppingMap).forEach(item => {
+      // Calculate total quantity for display
+      let totalQty = item.quantity;
+      const priceData = LOCAL_PRICES[item.item.toLowerCase()];
+      const unit = priceData?.unit || 'units';
+
+      // Simple rounding for display, adjust if necessary
+      if (unit === 'kg' || unit === 'liter') {
+        // Round up to the nearest 0.5 unit for realistic bulk purchasing
+        totalQty = Math.ceil(totalQty * 2) / 2; 
+      } else if (unit === 'dozen' || unit === 'loaf') {
+        // Round up to nearest whole unit
+        totalQty = Math.ceil(totalQty); 
+      } else {
+        totalQty = item.quantity.toFixed(1);
+      }
+
       shoppingList.push({
         item: item.item,
-        quantity: `${item.quantity.toFixed(1)} ${LOCAL_PRICES[item.item.toLowerCase()]?.unit || 'units'}`,
+        quantity: `${totalQty} ${unit}`,
         category: item.category,
         estimatedCost: Math.round(item.estimatedCost)
       });
     });
     
     // Calculate metrics
-    const inventoryUsed = usedInventoryItems.length;
-    const wasteReduction = inventory.length > 0 ? Math.round((inventoryUsed / inventory.length) * 100) : 0;
+    const inventoryUsedCount = usedInventoryItems.length;
+    const wasteReduction = inventory.length > 0 ? Math.round((inventoryUsedCount / inventory.length) * 100) : 0;
     const nutritionScore = Math.round(nutritionScoreSum / 7);
+    
+    // Better money saved calculation: sum of original estimated cost of used inventory items
     const savedAmount = Math.round(usedInventoryItems.reduce((sum, item) => {
       const priceData = LOCAL_PRICES[item.item_name?.toLowerCase()];
-      return sum + (priceData ? priceData.price * 0.15 : 20);
+      // Estimate 200g value for the item used, or a default value
+      const estimatedValue = priceData ? priceData.price * 0.2 : 40; 
+      return sum + estimatedValue;
     }, 0));
     
     // Generate insights
     const insights = generateOptimizationInsights(
       totalCost,
       budget,
-      inventoryUsed,
+      inventoryUsedCount,
       inventory.length,
       nutritionScore,
       optimizationMode
@@ -271,7 +318,7 @@ const MealOptimizer = () => {
       totalCost: Math.round(totalCost),
       wasteReduction,
       nutritionScore,
-      inventoryUsed,
+      inventoryUsed: inventoryUsedCount,
       savedAmount,
       shoppingList,
       shoppingListCost: Math.round(shoppingList.reduce((sum, item) => sum + item.estimatedCost, 0)),
@@ -282,28 +329,29 @@ const MealOptimizer = () => {
     };
   };
 
-  const generateMeal = (mealType, budgetLimit, inventory, usedItems, weights) => {
+  const generateMeal = (mealType, budgetLimit, inventory, usedItems, weights, mealIndex, mealNameHistory = []) => {
+    // Meal Templates with estimated Cost and Nutrition data added
     const mealTemplates = {
       breakfast: [
-        { name: 'Omelette with Toast', base: 'eggs', sides: ['bread', 'butter'], cost: 35 },
-        { name: 'Rice and Dal', base: 'rice', sides: ['lentils', 'onion'], cost: 25 },
-        { name: 'Milk and Banana', base: 'milk', sides: ['banana', 'oats'], cost: 40 },
-        { name: 'Paratha with Egg', base: 'wheat flour', sides: ['eggs', 'oil'], cost: 30 },
-        { name: 'Bread and Butter', base: 'bread', sides: ['butter', 'milk'], cost: 35 }
+        { name: 'Omelette with Toast', base: 'eggs', sides: ['bread', 'butter'], cost: 45, nut: { protein: 18, carbs: 45, fiber: 4, calories: 420 } },
+        { name: 'Rice and Dal', base: 'rice', sides: ['lentils', 'onion'], cost: 30, nut: { protein: 12, carbs: 60, fiber: 8, calories: 350 } },
+        { name: 'Milk and Oats Porridge', base: 'milk', sides: ['banana', 'oats'], cost: 50, nut: { protein: 15, carbs: 55, fiber: 6, calories: 400 } },
+        { name: 'Paratha with Egg', base: 'wheat flour', sides: ['eggs', 'oil'], cost: 40, nut: { protein: 16, carbs: 50, fiber: 3, calories: 380 } },
+        { name: 'Bread and Yogurt', base: 'bread', sides: ['yogurt', 'papaya'], cost: 45, nut: { protein: 14, carbs: 48, fiber: 5, calories: 390 } }
       ],
       lunch: [
-        { name: 'Rice with Chicken Curry', base: 'rice', sides: ['chicken', 'onion', 'tomato'], cost: 85 },
-        { name: 'Rice with Fish Curry', base: 'rice', sides: ['fish', 'potato', 'onion'], cost: 75 },
-        { name: 'Rice with Dal and Vegetables', base: 'rice', sides: ['lentils', 'spinach', 'carrot'], cost: 40 },
-        { name: 'Rice with Beef Curry', base: 'rice', sides: ['beef', 'potato', 'onion'], cost: 120 },
-        { name: 'Rice with Egg Curry', base: 'rice', sides: ['eggs', 'tomato', 'onion'], cost: 50 }
+        { name: 'Rice with Chicken Curry', base: 'rice', sides: ['chicken', 'onion', 'tomato'], cost: 100, nut: { protein: 25, carbs: 70, fiber: 6, calories: 550 } },
+        { name: 'Rice with Fish Curry', base: 'rice', sides: ['fish', 'potato', 'onion'], cost: 90, nut: { protein: 22, carbs: 75, fiber: 7, calories: 500 } },
+        { name: 'Rice with Dal and Mixed Veg', base: 'rice', sides: ['lentils', 'spinach', 'carrot'], cost: 60, nut: { protein: 18, carbs: 80, fiber: 10, calories: 450 } },
+        { name: 'Beef Khichuri', base: 'rice', sides: ['beef', 'lentils', 'onion'], cost: 140, nut: { protein: 30, carbs: 70, fiber: 5, calories: 600 } },
+        { name: 'Rice with Egg Curry', base: 'rice', sides: ['eggs', 'tomato', 'onion'], cost: 70, nut: { protein: 19, carbs: 70, fiber: 6, calories: 480 } }
       ],
       dinner: [
-        { name: 'Rice with Vegetable Curry', base: 'rice', sides: ['potato', 'cauliflower', 'carrot'], cost: 45 },
-        { name: 'Rice with Lentil Soup', base: 'rice', sides: ['lentils', 'onion', 'spinach'], cost: 40 },
-        { name: 'Rice with Fish and Vegetables', base: 'rice', sides: ['fish', 'eggplant', 'tomato'], cost: 80 },
-        { name: 'Rice with Chicken and Salad', base: 'rice', sides: ['chicken', 'cabbage', 'carrot'], cost: 75 },
-        { name: 'Bread with Vegetable Stew', base: 'bread', sides: ['potato', 'carrot', 'onion'], cost: 35 }
+        { name: 'Rice with Vegetable Curry', base: 'rice', sides: ['potato', 'cauliflower', 'carrot'], cost: 65, nut: { protein: 10, carbs: 75, fiber: 9, calories: 420 } },
+        { name: 'Tofu and Vegetable Stir-fry', base: 'rice', sides: ['tofu', 'bell pepper', 'broccoli'], cost: 95, nut: { protein: 20, carbs: 60, fiber: 8, calories: 450 } },
+        { name: 'Rice with Fish and Eggplant Bhaji', base: 'rice', sides: ['fish', 'eggplant', 'tomato'], cost: 100, nut: { protein: 23, carbs: 68, fiber: 7, calories: 500 } },
+        { name: 'Chicken and Cabbage Salad', base: 'chicken', sides: ['cabbage', 'carrot', 'oil'], cost: 90, nut: { protein: 28, carbs: 30, fiber: 5, calories: 380 } },
+        { name: 'Bread with Lentil Stew', base: 'bread', sides: ['lentils', 'carrot', 'onion'], cost: 55, nut: { protein: 15, carbs: 65, fiber: 9, calories: 400 } }
       ]
     };
     
@@ -311,12 +359,15 @@ const MealOptimizer = () => {
     
     // Try to find a meal that fits budget and uses inventory
     let selectedMeal = null;
-    let bestScore = -1;
+    let bestScore = -Infinity; // Initialize with negative infinity
     
-    for (const template of templates) {
-      if (template.cost > budgetLimit * 1.5) continue; // Skip if way over budget
+    for (let i = 0; i < templates.length; i++) {
+      const template = templates[i];
+
+      // Use the template's suggested cost as a better indicator, slightly lenient on budget
+      if (template.cost > budgetLimit * 1.8) continue; 
       
-      const allIngredients = [template.base, ...template.sides];
+      const allIngredients = [template.base, ...template.sides].map(name => name.toLowerCase());
       let inventoryMatches = 0;
       let actualCost = 0;
       const ingredients = [];
@@ -324,46 +375,70 @@ const MealOptimizer = () => {
       
       // Check each ingredient
       allIngredients.forEach(ingName => {
+        // Check if an unused inventory item matches the required ingredient
         const invItem = inventory.find(i => 
           i.item_name.toLowerCase().includes(ingName) && 
           !usedItems.find(u => u.id === i.id)
         );
         
-        if (invItem && weights.waste > 0.3) {
+        if (invItem) {
           inventoryMatches++;
           inventoryUsed.push(invItem);
           ingredients.push({
             name: invItem.item_name,
-            quantity: 0.2,
+            quantity: 0.2, // Assumed use amount
             category: invItem.category || 'other',
             cost: 0,
             fromInventory: true
           });
         } else {
-          const priceData = LOCAL_PRICES[ingName.toLowerCase()] || { price: 50, unit: 'kg' };
-          const qty = 0.2; // 200g per ingredient
+          const priceData = LOCAL_PRICES[ingName.toLowerCase()] || { price: 50, unit: 'kg', category: 'other' };
+          const qty = 0.2; // 200g per ingredient assumed
           const cost = priceData.price * qty;
           actualCost += cost;
           
           ingredients.push({
             name: ingName,
             quantity: qty,
-            category: priceData.category || 'other',
+            category: priceData.category,
             cost,
             fromInventory: false
           });
         }
       });
       
-      // Calculate score
-      const budgetScore = actualCost <= budgetLimit ? 100 : Math.max(0, 100 - ((actualCost - budgetLimit) / budgetLimit) * 100);
+      // Calculate Score
+      // 1. Budget Score (Higher is better, 0 if significantly over budget)
+      const budgetScore = actualCost <= budgetLimit 
+        ? 100 
+        : Math.max(0, 100 - ((actualCost - budgetLimit) / budgetLimit) * 30); // Less harsh penalty for versatility
+
+      // 2. Waste Score (Higher is better, based on inventory usage)
       const wasteScore = (inventoryMatches / allIngredients.length) * 100;
-      const nutritionScore = 70; // Base nutrition score
       
+      // 3. Nutrition Score (Based on template nutrition data)
+      const baseNutritionScore = calculateMealNutritionScore(template.nut);
+
+      // 4. Inventory Bonus (Aggressive push to use inventory)
+      const inventoryBonus = inventoryMatches > 0 ? 1000 * inventoryMatches : 0;
+      
+      // 5. Diversity/Recency Penalty (CRITICAL FIX: Strong penalty for repeated meals)
+      let diversityPenalty = 0;
+      // Check if the meal has been used in the last 7 days (the entire plan so far)
+      if (mealNameHistory.includes(template.name)) {
+          diversityPenalty = -50000; // Severe penalty to force a different choice
+      }
+      
+      // 6. Tie Breaker Randomness
+      const tieBreaker = i * 10 + Math.random() * 10; 
+
+      // Amplify the inventory bonus using the waste weight
       const totalScore = 
-        budgetScore * weights.budget +
-        nutritionScore * weights.nutrition +
-        wasteScore * weights.waste;
+        budgetScore * weights.budget * 100 +
+        baseNutritionScore * weights.nutrition * 100 +
+        (wasteScore + inventoryBonus) * weights.waste * 100 + 
+        tieBreaker +
+        diversityPenalty; // Apply the severe penalty
       
       if (totalScore > bestScore) {
         bestScore = totalScore;
@@ -372,17 +447,18 @@ const MealOptimizer = () => {
           cost: actualCost,
           ingredients,
           inventoryUsed,
+          // Use the template's base nutrition and add slight randomness for realism
           nutrition: {
-            protein: 15 + Math.random() * 10,
-            carbs: 40 + Math.random() * 20,
-            fiber: 5 + Math.random() * 5,
-            calories: 350 + Math.random() * 150
+            protein: template.nut.protein + Math.random() * 5,
+            carbs: template.nut.carbs + Math.random() * 10,
+            fiber: template.nut.fiber + Math.random() * 3,
+            calories: template.nut.calories + Math.random() * 50
           }
         };
       }
     }
     
-    // Fallback to simplest meal
+    // Fallback if no meal was selected (should be rare)
     if (!selectedMeal) {
       const fallback = templates[0];
       selectedMeal = {
@@ -396,16 +472,11 @@ const MealOptimizer = () => {
           fromInventory: false
         })),
         inventoryUsed: [],
-        nutrition: {
-          protein: 15,
-          carbs: 50,
-          fiber: 5,
-          calories: 400
-        }
+        nutrition: fallback.nut
       };
     }
     
-    // Mark inventory as used
+    // Mark inventory as used (using the unique ID)
     selectedMeal.inventoryUsed.forEach(item => {
       if (!usedItems.find(u => u.id === item.id)) {
         usedItems.push(item);
@@ -416,25 +487,45 @@ const MealOptimizer = () => {
   };
 
   const calculateMealNutritionScore = (nutrition) => {
-    const proteinScore = Math.min(100, (parseFloat(nutrition.protein) / 60) * 100);
-    const carbScore = Math.min(100, (parseFloat(nutrition.carbs) / 150) * 100);
-    const fiberScore = Math.min(100, (parseFloat(nutrition.fiber) / 15) * 100);
-    const calScore = nutrition.totalCal >= 1800 && nutrition.totalCal <= 2400 ? 100 : 70;
+    // Target daily totals for an adult (approx 2100 Cal, 60g Protein, 15g Fiber)
+    const dailyProteinTarget = 60; 
+    const dailyCarbsTarget = 150; 
+    const dailyFiberTarget = 15;
+    const dailyCalTarget = 2100;
+
+    // Scale down targets for one meal (assuming 3 meals)
+    const mealProteinTarget = dailyProteinTarget / 3;
+    const mealCarbsTarget = dailyCarbsTarget / 3;
+    const mealFiberTarget = dailyFiberTarget / 3;
+    const mealCalMin = 350;
+    const mealCalMax = 600;
+
+    // Scoring: aiming for the target without being too high
+    const proteinScore = Math.min(100, (nutrition.protein / mealProteinTarget) * 100);
+    const carbScore = Math.min(100, (nutrition.carbs / mealCarbsTarget) * 100);
+    const fiberScore = Math.min(100, (nutrition.fiber / mealFiberTarget) * 100);
+    const calScore = nutrition.totalCal >= mealCalMin && nutrition.totalCal <= mealCalMax ? 100 : 70;
     
     return (proteinScore + carbScore + fiberScore + calScore) / 4;
   };
 
   const generateOptimizationInsights = (cost, budget, used, total, nutrition, mode) => {
     const insights = [];
+    const savings = budget - cost;
     
-    if (cost < budget * 0.9) {
+    if (savings >= 0) {
       insights.push({
         title: 'Under Budget Success',
-        description: `Meal plan costs ৳${Math.round(cost)}, saving ৳${Math.round(budget - cost)} (${Math.round(((budget - cost) / budget) * 100)}% savings)`
+        description: `Meal plan costs ৳${Math.round(cost)}, saving ৳${Math.round(savings)} (${Math.round((savings / budget) * 100)}% savings)`
+      });
+    } else {
+      insights.push({
+        title: 'Over Budget Alert',
+        description: `Meal plan costs ৳${Math.round(cost)}, exceeding budget by ৳${Math.abs(Math.round(savings))}. Consider 'Budget Priority' mode.`
       });
     }
     
-    if (used > 0 && total > 0) {
+    if (total > 0) {
       const utilizationPercent = Math.round((used / total) * 100);
       insights.push({
         title: 'Inventory Utilization',
@@ -447,19 +538,17 @@ const MealOptimizer = () => {
         title: 'Excellent Nutrition Balance',
         description: `Nutrition score of ${nutrition}/100 indicates well-balanced meals meeting dietary requirements`
       });
-    }
-    
-    if (mode === 'waste') {
+    } else if (nutrition >= 70) {
       insights.push({
-        title: 'Waste Reduction Priority',
-        description: 'Meal plan prioritized using expiring items first, following FIFO inventory management'
+        title: 'Good Nutrition Balance',
+        description: `Nutrition score of ${nutrition}/100 indicates a good dietary balance. For higher score, try 'Nutrition Priority'.`
       });
     }
     
-    if (insights.length === 0) {
+    if (mode === 'waste' && total > 0) {
       insights.push({
-        title: 'Balanced Approach',
-        description: 'Meal plan balances budget, nutrition, and inventory usage effectively'
+        title: 'Waste Reduction Priority',
+        description: 'Meal plan successfully prioritized using expiring items first, following FIFO inventory management'
       });
     }
     
@@ -547,7 +636,7 @@ const MealOptimizer = () => {
                 placeholder="1000"
                 min="100"
               />
-              
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Recommended: ৳800-1500 per week for balanced nutrition
@@ -606,7 +695,7 @@ const MealOptimizer = () => {
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                  
+                  <DollarSign className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <div className="text-3xl font-black text-gray-800">৳{mealPlan.totalCost}</div>
@@ -808,7 +897,7 @@ const MealOptimizer = () => {
                         <span className="font-semibold">Fiber:</span> {day.nutritionSummary.fiber}
                       </div>
                       <div>
-                        <span className="font-semibold">Calories:</span> {day.nutritionSummary.totalCal}
+                        <span className="font-semibold">Calories:</span> {day.nutritionSummary.calories}
                       </div>
                     </div>
                   </div>
