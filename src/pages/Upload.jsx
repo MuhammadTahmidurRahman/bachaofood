@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload as UploadIcon, Image, FileText, Calendar, Trash2, Link as LinkIcon, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
+import { extractText } from "../utils/ocr";
+
 
 const Upload = () => {
   const { user } = useAuth();
@@ -77,6 +79,14 @@ const Upload = () => {
       }
 
       console.log('File uploaded to storage, URL:', fileUrl);
+// ----- OCR extract text -----
+let ocrText = "";
+try {
+  ocrText = await extractText(file);
+  console.log("OCR RESULT:", ocrText);
+} catch (err) {
+  console.error("OCR failed:", err);
+}
 
       // Save record to database
       const uploadData = {
@@ -118,6 +128,18 @@ const Upload = () => {
       console.error('Upload error:', err);
       alert(`Failed to upload: ${err.message || 'Unknown error'}`);
     }
+// Auto-generate inventory from receipt
+if (association === "receipt") {
+  try {
+    const { processReceipt } = await import("../lib/receiptParser");
+    await processReceipt(file, user.id);
+    
+    await loadInventoryAndLogs();
+
+  } catch (err) {
+    console.error("Receipt auto-inventory failed:", err);
+  }
+}
 
     setUploading(false);
   };

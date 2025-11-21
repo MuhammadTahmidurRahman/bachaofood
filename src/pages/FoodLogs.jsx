@@ -4,21 +4,6 @@ import { Plus, BookOpen, Calendar, Tag, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbHelpers } from '../lib/supabase';
 
-/**
- * FoodLogs.jsx
- *
- * Features added:
- * - When creating a log, deduct the logged quantity from inventory (FIFO by expiry_date).
- * - When deleting a log, add the logged quantity back to inventory (best-effort).
- * - Inventory dropdown to pick an existing inventory item (prefills name & category).
- *
- * Notes / Caveats:
- * - If multiple inventory rows exist for the same item_name, the code subtracts from the earliest-expiring rows.
- * - If there's not enough inventory to cover the logged quantity, it will still create the log and deduct what's available,
- *   and will alert the user about the shortfall.
- * - Reverting a deleted log tries to put the quantity back into existing rows; if none exist, it creates a new inventory row.
- * - For stronger ACID guarantees (atomic multi-row updates + log creation) we can add a Postgres RPC to handle it server-side.
- */
 
 const FoodLogs = () => {
   const { user } = useAuth();
