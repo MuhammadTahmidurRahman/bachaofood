@@ -216,7 +216,7 @@ const Profile = () => {
           />
 
           <Field
-            icon={<DollarSign size={18} />}
+            icon={<div className="text-xl font-bold">৳</div>}
             label="Budget Range"
             raw
             value={
